@@ -1,0 +1,5 @@
+build
+chessplusplus.egg-info
+dist
+__pycache__
+saves/*
