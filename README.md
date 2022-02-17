@@ -8,13 +8,28 @@
 
 ## Chess++ RPG made in PyGame.
 
-(following is the description of what this game will be like when finished!)
+**(the following is the description of what this game will be like when finished!)**
 
-*This project is a pygame (GUI) chess-based RPG game. It uses chess as its base combat system, but with piece abilities, special pieces, and much more! There is adventure mode, dungeon crawler mode, and many other game modes.*
+*This project is a pygame (GUI) chess-based RPG game. It uses chess as its base combat system, but with piece abilities, special pieces, and much more! There is adventure mode, dungeon mode, and many other game modes.*
 
 Currently, only the chess board is implemented into the game.
 
 This game is using [Python chess library](https://github.com/niklasf/python-chess).
+
+# Table of Contents
+- [ChessPlusPlus Alpha](#chessplusplus-alpha)
+  - [Chess++ RPG made in PyGame.](#chess-rpg-made-in-pygame)
+- [Table of Contents](#table-of-contents)
+- [Credits](#credits)
+- [License](#license)
+- [Warnings](#warnings)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Content](#content)
+  - [Added Features:](#added-features)
+  - [Planned Features:](#planned-features)
+- [How to Contribute](#how-to-contribute)
+- [Related Links](#related-links)
 
 # Credits
 
@@ -52,10 +67,22 @@ Upon successful execution of the project, you should see this:
 
 # Content
 
+## Added Features:
+
+* Classic Chess Board
+
 ## Planned Features:
 
-* Accessory Bags, Minion Bags, Wardrobe, etc.
-* Brewing and Potion effects
+* Abilities
+* Adventure Mode (chess pieces have health, damage, defense, and abilities)
+* Classic Chess Mode (chess puzzles, not limited to legal chess boards)
+* Currency and Shops
+* Dungeon Mode (dungeons with adventure-mode-like combat system)
+* Guides
+* Items and Inventory
+* Levels and maybe Skills
+* Randomly generated levels configurable with estimated power
+* Save files
 
 # How to Contribute
 
