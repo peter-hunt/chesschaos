@@ -4,7 +4,7 @@
 ![](https://img.shields.io/github/license/peter-hunt/chessplusplus)
 ![](https://img.shields.io/github/issues/peter-hunt/chessplusplus)
 
-![](screenshots/social-preview.jpg)
+![](images/social-preview.jpg)
 
 ## Chess++ RPG made in PyGame.
 
@@ -64,7 +64,7 @@ python -m chessplusplus
 ```
 
 Upon successful execution of the project, you should see this:
-![](screenshots/launch.png)
+![](images/launch.png)
 
 # Content
 

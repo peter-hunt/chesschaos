@@ -3,7 +3,7 @@ from pygame.constants import (
     RESIZABLE,
 )
 
-from pygame.display import flip as display_flip, set_caption, set_mode
+from pygame.display import flip as display_flip, set_caption, set_icon, set_mode
 from pygame.draw import circle as draw_circle
 from pygame.event import get as get_event
 from pygame.image import load as load_image
@@ -35,12 +35,15 @@ for piece_color in COLOR_NAMES:
             join(folder, 'assets', f'{piece_color}-{piece_type}.png')
         ))
 
+ICON = load_image(join(folder, 'assets', 'icon.png'))
+
 
 class Game:
     def __init__(self):
         self.size = DEFAULT_WINDOW_SIZE
         self.board = Board()
         self.screen = set_mode(self.size, RESIZABLE)
+        set_icon(ICON)
         set_caption('Chess++')
 
         self.drag_rank = -1
