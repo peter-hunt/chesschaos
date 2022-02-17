@@ -18,6 +18,8 @@ from chess import (
     Board, Move,
 )
 
+from os.path import join, split
+
 from constants import *
 
 
@@ -26,9 +28,12 @@ __all__ = ['Game']
 
 PIECES = []
 
+folder = split(__file__)[0]
 for piece_color in COLOR_NAMES:
     for piece_type in PIECE_NAMES[1:]:
-        PIECES.append(load_image(f'./assets/{piece_color}-{piece_type}.png'))
+        PIECES.append(load_image(
+            join(folder, 'assets', f'{piece_color}-{piece_type}.png')
+        ))
 
 
 class Game:

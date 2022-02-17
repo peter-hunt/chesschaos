@@ -58,8 +58,9 @@ git clone https://github.com/peter-hunt/chessplusplus.git
 
 # Usage
 
+Go to the subfolder of project folder and execute the following command.
 ```bash
-python -m skyblock
+python -m chessplusplus
 ```
 
 Upon successful execution of the project, you should see this:
