@@ -1,5 +1,6 @@
 from pygame.constants import (
-    MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT, RESIZABLE, SRCALPHA,
+    MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT,
+    RESIZABLE,
 )
 
 from pygame.display import flip as display_flip, set_caption, set_mode
@@ -8,7 +9,7 @@ from pygame.event import get as get_event
 from pygame.image import load as load_image
 from pygame.mouse import get_pos as get_mouse_pos
 from pygame.transform import scale
-from pygame import Rect, Surface
+from pygame import Surface
 
 from chess import (
     COLORS, COLOR_NAMES, WHITE, BLACK,
@@ -19,7 +20,9 @@ from chess import (
 
 from constants import *
 
+
 __all__ = ['Game']
+
 
 PIECES = []
 
