@@ -1,5 +1,5 @@
+.vscode
 build
-chessplusplus.egg-info
+chesschaos.egg-info
 dist
 __pycache__
-saves/*

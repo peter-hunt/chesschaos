@@ -66,6 +66,7 @@ def gen_moves(board):
     return sorted(list(board.legal_moves), key=lambda move: (
         -(move.promotion is not None),
         -(BB_SQUARES[move.to_square] & board.occupied),
+        -(BB_SQUARES[move.to_square] & board.pawns),
     ))
 
 
@@ -129,7 +130,7 @@ def move_search(board, depth, alpha=-inf, beta=inf):
         return value, best_move
 
 
-def move_engine(board: Board, /, depth=3, *, use_openings=True):
+def move_engine(board: Board, /, depth=4, *, use_openings=True):
     if use_openings:
         name, move = search_openings(board)
         if move is not None:

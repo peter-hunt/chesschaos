@@ -233,14 +233,14 @@ CLASSIC_LEVELS = (
     ("Half Blood Horde",
      'rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/RNBQKBNR w KQkq - 0 1'),
 
+    ("King Hunt",
+     '4k3/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1'),
     ("Easy Chess",
      '4k3/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1'),
     ("Who Needs Castling",
      '4k3/pppppppp/8/8/8/8/PPPPPPPP/1NBQKBN1 w - - 0 1'),
     ("Diagonal Firepower",
      '4k3/pppppppp/8/8/8/8/PPPPPPPP/2BQKB2 w - - 0 1'),
-    ("Up a Queen",
-     '4k3/pppppppp/8/8/8/8/PPPPPPPP/3QK3 w - - 0 1'),
     ("Queen vs Pawns",
      '4k3/pppppppp/8/8/8/8/8/3QK3 w - - 0 1'),
 

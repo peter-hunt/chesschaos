@@ -1,6 +1,6 @@
-# Contributing to Chess++
+# Contributing to ChessChaos
 
-Welcome to the guide of contributing to Chess++! Below are the **rules of contributing to Chess++**.
+Welcome to the guide of contributing to ChessChaos! Below are the **rules of contributing to ChessChaos**.
 
 # Bugs
 

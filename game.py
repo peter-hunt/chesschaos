@@ -49,7 +49,7 @@ class Game:
         self.board = Board(CLASSIC_LEVELS[0][1])
         self.screen = set_mode(self.screen_size, RESIZABLE)
         set_icon(ICON)
-        set_caption('Chess++')
+        set_caption('ChessChaos')
 
         self.drag_rank = self.drag_file = -1
         self.drag_xpad = self.drag_ypad = 0
@@ -175,9 +175,9 @@ class Game:
         outcome = self.board.outcome()
         if outcome is not None:
             if outcome.winner == self.player_turn:
-                text = 'You won.'
+                text = 'You won'
             elif outcome.winner == (not self.player_turn):
-                text = 'You lost.'
+                text = 'You lost'
             elif self.board.is_stalemate():
                 text = 'Stalemate Draw'
             elif self.board.is_insufficient_material():
@@ -187,7 +187,7 @@ class Game:
             elif self.board.is_fivefold_repetition():
                 text = 'Repetition Draw'
             else:
-                text = "It's a draw."
+                text = "It's a draw"
             self.level_text_winner = FONT.render(text, 0, (255, 255, 255))
         else:
             self.level_text_winner = None
