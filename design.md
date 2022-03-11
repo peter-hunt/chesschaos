@@ -45,11 +45,13 @@ There are different regions the player can explore, each revealing unique NPCs, 
 
 ### Goals
 
-Overall: Survive in the apocolypse and improve yourself to conquer the Chess Chaos.
+Overall: Survive in the apocalypse and improve yourself to conquer the Chess Chaos.
 
 Gameplay: Grind for better pieces, unlock new regions, beat tougher mobs.
 
 ### Quests
+
+Use advancing quests to guide the player through progression and give them a sense of advancement.
 
 ### Advancements
 
@@ -57,7 +59,7 @@ Gameplay: Grind for better pieces, unlock new regions, beat tougher mobs.
 
 ### Abilities
 
-Piece abilities can be applied when obtained or added to a piece. **All of the unique conflicts each other for game balance.**
+Piece abilities can be applied when obtained or added to a piece. **All the unique conflicts each other for game balance.**
 
 **Every pawn can move 2 steps ahead in certain direction on the first move, and en passant rule is always applied.**
 

@@ -24,8 +24,8 @@ Currently, only the a few playable chess positions are added. The design of the 
 - [Installation](#installation)
 - [Usage](#usage)
 - [Content](#content)
-  - [Added Features:](#added-features)
-  - [Planned Features:](#planned-features)
+  - [Added Features](#added-features)
+  - [Planned Features](#planned-features)
 - [How to Contribute](#how-to-contribute)
 # Credits
 
@@ -65,11 +65,11 @@ Upon successful execution of the project, you should see this: ![](images/launch
 
 # Content
 
-## Added Features:
+## Added Features
 
 - Classic Mode (chess puzzles, not limited to legal chess boards)
 
-## Planned Features:
+## Planned Features
 
 The game design of ChessChaos can be seen [here](./design.md)
 
