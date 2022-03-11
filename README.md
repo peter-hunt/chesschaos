@@ -12,7 +12,7 @@
 
 _ChessChaos is a tactic adventure story set in Chaos of Chess, where pieces have special abilities. You are a survivor of the last chess apocalypse. You can obtain chess piece variants with special abilities, play against wicked creatures, adventure the wild or crawl the dungeons, conquer the Chaos of Chess._
 
-Currently, only the a few playable chess positions are added. The design of the game features can be seen [here](./design.md)
+Currently, only a few playable chess positions are added. The design of the game features can be seen [here](./design.md)
 
 # Table of Contents
 - [ChessChaos](#chesschaos)
