@@ -71,6 +71,8 @@ Upon successful execution of the project, you should see this: ![](images/launch
 
 ## Planned Features:
 
+The game design of ChessChaos can be seen [here](./design.md)
+
 - Adventure Mode (chess pieces have health, damage, defense, and abilities)
 - Configurable chess pieces styles and a more RPG style as default
 - Currency and Shops
@@ -81,4 +83,4 @@ Upon successful execution of the project, you should see this: ![](images/launch
 
 # How to Contribute
 
-
+[CONTRIBUTING.md](./CONTRIBUTING.md)
