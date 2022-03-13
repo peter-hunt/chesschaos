@@ -1,16 +1,3 @@
-from pygame.constants import (
-    MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT,
-    RESIZABLE)
-
-from pygame.display import flip as display_flip, set_caption, set_icon, set_mode
-from pygame.draw import circle as draw_circle
-from pygame.event import get as get_event
-from pygame.font import Font
-from pygame.image import load as load_image
-from pygame.mouse import get_pos as get_mouse_pos, get_pressed as get_mouse_pressed
-from pygame.transform import scale
-from pygame import Rect, Surface, init as pygame_init
-
 from chess import (
     STARTING_FEN, COLOR_NAMES, PIECE_NAMES, BB_SQUARES,
     WHITE, BLACK,
@@ -19,11 +6,23 @@ from chess import Board, Move
 from chess.polyglot import zobrist_hash as hash_board
 Board.__hash__ = hash_board
 
+from pygame.constants import (
+    MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT)
+from pygame.display import flip as display_flip, set_caption, set_icon, set_mode
+from pygame.draw import circle as draw_circle
+from pygame.event import get as get_event
+from pygame.font import Font
+from pygame.image import load as load_image
+from pygame.mouse import get_pos as get_mouse_pos, get_pressed as get_mouse_pressed
+from pygame.transform import scale
+from pygame import Rect, init as pygame_init
+
 from math import ceil
 from os.path import join, split
 
-from constants import *
 from bot import move_engine
+from constants import *
+from function import get_surface
 
 
 __all__ = ['Game']
@@ -46,7 +45,7 @@ FONT = Font(join(folder, 'assets', 'ComicSans.ttf'), 64)
 class Game:
     def __init__(self, level_selected=0):
         self.size = DEFAULT_WINDOW_SIZE
-        self.screen = Surface(self.size).convert_alpha()
+        self.screen = get_surface(self.size)
 
         self.drag_rank = self.drag_file = -1
         self.drag_xpad = self.drag_ypad = 0
@@ -68,7 +67,7 @@ class Game:
             height = width / 1.8
 
         self.size = width, height
-        self.screen = Surface(self.size).convert_alpha()
+        self.screen = get_surface(self.size)
         rect_size = min(self.size)
         board_size = rect_size * 0.8
         self.block_size = block_size = rect_size * 0.1
@@ -81,10 +80,8 @@ class Game:
             self.pieces.append(
                 scale(image, (block_size, block_size)))
 
-        self.board_base = Surface((board_size, board_size))
-        self.board_base.fill(LIGHT_SQUARE_COLOR)
-        dark_square = Surface((block_size, block_size))
-        dark_square.fill(DARK_SQUARE_COLOR)
+        self.board_base = get_surface((board_size, board_size), LIGHT_SQUARE_COLOR)
+        dark_square = get_surface((block_size, block_size), DARK_SQUARE_COLOR)
         for rank in range(8):
             for file in range(8):
                 if (rank + file) % 2 == 0:
@@ -92,47 +89,33 @@ class Game:
                         dark_square, (file * block_size,
                                       (7 - rank) * block_size))
 
-        self.light_move = Surface(
-            (block_size, block_size)).convert_alpha()
-        self.light_move.fill((0, 0, 0, 0))
+        self.light_move = get_surface((block_size, block_size), (0, 0, 0, 0))
         draw_circle(self.light_move, (14, 14, 14, 25),
                     (block_size / 2, block_size / 2), block_size / 6)
 
-        self.light_capture = Surface(
-            (block_size, block_size)).convert_alpha()
-        self.light_capture.fill((0, 0, 0, 0))
+        self.light_capture = get_surface((block_size, block_size), (0, 0, 0, 0))
         draw_circle(self.light_capture, (14, 14, 14, 25),
                     (block_size / 2, block_size / 2), block_size * 0.5)
         draw_circle(self.light_capture, (0, 0, 0, 0),
                     (block_size / 2, block_size / 2), block_size * 0.375)
 
-        self.dark_move = Surface(
-            (block_size, block_size)).convert_alpha()
-        self.dark_move.fill((0, 0, 0, 0))
+        self.dark_move = get_surface((block_size, block_size), (0, 0, 0, 0))
         draw_circle(self.dark_move, (14, 14, 14, 25),
                     (block_size / 2, block_size / 2), block_size / 6)
 
-        self.dark_capture = Surface(
-            (block_size, block_size)).convert_alpha()
-        self.dark_capture.fill((0, 0, 0, 0))
+        self.dark_capture = get_surface((block_size, block_size), (0, 0, 0, 0))
         draw_circle(self.dark_capture, (14, 14, 14, 25),
                     (block_size / 2, block_size / 2), block_size * 0.5)
         draw_circle(self.dark_capture, (0, 0, 0, 0),
                     (block_size / 2, block_size / 2), block_size * 0.375)
 
-        self.white_promotion = Surface(
-            (block_size, block_size * 4)).convert_alpha()
-        self.white_promotion.fill((255, 255, 255, 255))
+        self.white_promotion = get_surface((block_size, block_size * 4), (255, 255, 255, 255))
         for i, piece in enumerate((QUEEN, KNIGHT, ROOK, BISHOP)):
-            self.white_promotion.blit(self.pieces[piece + 5],
-                                      (0, block_size * i))
+            self.white_promotion.blit(self.pieces[piece + 5], (0, block_size * i))
 
-        self.black_promotion = Surface(
-            (block_size, block_size * 4)).convert_alpha()
-        self.black_promotion.fill((255, 255, 255, 255))
+        self.black_promotion = get_surface((block_size, block_size * 4), (255, 255, 255, 255))
         for i, piece in enumerate((BISHOP, ROOK, KNIGHT, QUEEN)):
-            self.black_promotion.blit(self.pieces[piece - 1],
-                                      (0, block_size * i))
+            self.black_promotion.blit(self.pieces[piece - 1], (0, block_size * i))
 
         self.update_menu()
 
@@ -206,20 +189,18 @@ class Game:
             last_move = self.board.move_stack[-1]
             from_rank, from_file = divmod(last_move.from_square, 8)
             to_rank, to_file = divmod(last_move.to_square, 8)
-            from_square = Surface((self.block_size, self.block_size))
-            from_square.fill(
-                DARK_MOVE_COLOR if (from_rank + from_file) % 2 == 0
-                else LIGHT_MOVE_COLOR)
-            to_square = Surface((self.block_size, self.block_size))
-            to_square.fill(
-                DARK_MOVE_COLOR if (to_rank + to_file) % 2 == 0
-                else LIGHT_MOVE_COLOR)
+            from_color = (DARK_MOVE_COLOR if (from_rank + from_file) % 2 == 0
+                          else LIGHT_MOVE_COLOR)
+            to_color = (DARK_MOVE_COLOR if (to_rank + to_file) % 2 == 0
+                        else LIGHT_MOVE_COLOR)
             self.screen.blit(
-                from_square, (xpad + from_file * self.block_size,
-                              ypad + (7 - from_rank) * self.block_size))
+                get_surface((self.block_size, self.block_size), from_color),
+                (xpad + from_file * self.block_size,
+                 ypad + (7 - from_rank) * self.block_size))
             self.screen.blit(
-                to_square, (xpad + to_file * self.block_size,
-                            ypad + (7 - to_rank) * self.block_size))
+                get_surface((self.block_size, self.block_size), to_color),
+                (xpad + to_file * self.block_size,
+                 ypad + (7 - to_rank) * self.block_size))
 
         drag_square = self.drag_rank * 8 + self.drag_file
         for square in range(64):
@@ -301,6 +282,7 @@ class Game:
             if self.board.is_game_over():
                 self.update_menu()
             else:
+                self.draw()
                 bot_move = move_engine(
                     self.board, use_openings=self.level_fen == STARTING_FEN)
                 self.board.push(bot_move)
@@ -365,6 +347,7 @@ class Game:
                 self.promotion_from_square = -1
                 self.promotion_square = -1
                 self.promotion_pressed = -1
+                self._lmb_up()
                 return
             if self.drag_rank != -1 and self.board_rect.collidepoint(mx, my):
                 rank = int((self.block_size * 8 - (my - self.board_rect.top))

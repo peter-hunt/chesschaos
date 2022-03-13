@@ -90,7 +90,7 @@ Partially inspired by [chess.com](https://www.chess.com/article/view/10-remarkab
 - - Capture only after leaping over one other piece.
 - Sneaker: (NBR)
 - - Can move one square in any direction.
-- Scary (NBRQ)
+- Shock (NBRQ)
 - - When moved, for the next enemy move, enemy king cannot capture this piece.
 - Leaper (BRQ)
 - - Can move like a Knight.
