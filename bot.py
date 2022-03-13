@@ -82,129 +82,6 @@ for i in range(1, 7):
     for j in range(64):
         POS_VALUES[i][j] += PIECE_VALUES[i]
 
-OPENINGS = {
-    ('d4',),
-    ('g3',),
-    ('Nf3',),
-    ('f4',),
-    ('b3',),
-    ('e4',),
-    ('c4',),
-    ('c4', 'c5'),
-    ('e4', 'Nf6'),
-    ('e4', 'c6'),
-    ('d4', 'g6'),
-    ('e4', 'c5'),
-    ('e4', 'd5'),
-    ('d4', 'f5'),
-    ('e4', 'e6'),
-    ('e4', 'd6'),
-    ('d4', 'c5'),
-    ('c4', 'e5'),
-    ('e4', 'c5', 'Nc3'),
-    ('d4', 'Nf6', 'Bg5'),
-    ('Nf3', 'd5', 'c4'),
-    ('e4', 'e5', 'Nc3'),
-    ('d4', 'd5', 'c4'),
-    ('e4', 'e5', 'f4'),
-    ('Nf3', 'd5', 'g3'),
-    ('d4', 'Nf6', 'c4', 'd6'),
-    ('d4', 'Nf6', 'c4', 'e5'),
-    ('d4', 'Nf6', 'c4', 'e6', 'g3'),
-    ('d4', 'Nf6', 'c4', 'g6'),
-    ('d4', 'd5', 'Nf3', 'Nf6', 'Bf4'),
-    ('d4', 'd5', 'Nf3', 'Nf6', 'Bg5'),
-    ('d4', 'd5', 'c4', 'Nc6'),
-    ('d4', 'd5', 'c4', 'c6'),
-    ('d4', 'd5', 'c4', 'dxc4'),
-    ('d4', 'd5', 'c4', 'e5'),
-    ('d4', 'd5', 'e4'),
-    ('d4', 'f5', 'e4', 'fxe4'),
-    ('e4', 'c5', 'Nc3', 'Nc6', 'f4'),
-    ('e4', 'c5', 'c3'),
-    ('e4', 'c5', 'd4'),
-    ('e4', 'c6', 'd4', 'd5', 'exd5'),
-    ('e4', 'd5', 'exd5', 'Nf6'),
-    ('e4', 'e5', 'Bc4'),
-    ('e4', 'e5', 'Nf3', 'Nf6'),
-    ('e4', 'e5', 'Nf3', 'Nf6', 'd4'),
-    ('e4', 'e5', 'Nf3', 'd6'),
-    ('e4', 'e5', 'f4', 'Bc5'),
-    ('e4', 'e5', 'f4', 'd5'),
-    ('e4', 'e5', 'f4', 'exf4'),
-    ('e4', 'e6', 'd4', 'd5', 'e5'),
-    ('d4', 'Nf6', 'c4', 'c5', 'd5', 'b5'),
-    ('d4', 'Nf6', 'c4', 'c5', 'd5', 'e6'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nc3', 'Bb4'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nf3', 'b6'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'd5'),
-    ('d4', 'd5', 'Nc3', 'Nf6', 'Bg5'),
-    ('e4', 'c6', 'd4', 'd5', 'e5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Bc5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bc4'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Be7'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Nf6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Nc3', 'Nf6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'd4'),
-    ('e4', 'e5', 'Nf3', 'Nf6', 'Nc3'),
-    ('e4', 'e5', 'd4', 'exd4', 'c3'),
-    ('e4', 'e5', 'f4', 'exf4', 'Bc4'),
-    ('e4', 'e5', 'f4', 'exf4', 'Nf3', 'd5'),
-    ('e4', 'e6', 'd4', 'd5', 'Nc3', 'Nf6'),
-    ('e4', 'e6', 'd4', 'd5', 'Nc3', 'dxe4'),
-    ('e4', 'e6', 'd4', 'd5', 'Nd2'),
-    ('e4', 'e6', 'd4', 'd5', 'exd5'),
-    ('e4', 'g6', 'd4', 'Bg7', 'Nc3', 'c5'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nc3', 'Bb4', 'Qc2'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nc3', 'Bb4', 'e3', 'c5'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nf3', 'Bb4+'),
-    ('d4', 'Nf6', 'c4', 'e6', 'g3', 'd5', 'Bg2'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'd5', 'Bf4'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'd5', 'Bg5'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'd5', 'Nf3'),
-    ('d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Nf3', 'c6'),
-    ('d4', 'd5', 'c4', 'e6', 'Nf3', 'c5'),
-    ('e4', 'c5', 'Nf3', 'e6', 'd4', 'cxd4', 'Nxd4', 'Nc6'),
-    ('e4', 'c5', 'Nf3', 'e6', 'd4', 'cxd4', 'Nxd4', 'a6'),
-    ('e4', 'c6', 'd4', 'd5', 'Nc3', 'dxe4', 'Nxe4', 'Bf5'),
-    ('e4', 'c6', 'd4', 'd5', 'exd5', 'cxd5', 'c4'),
-    ('e4', 'd6', 'd4', 'Nf6', 'Nc3', 'g6', 'Nf3'),
-    ('e4', 'd6', 'd4', 'Nf6', 'Nc3', 'g6', 'f4'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Nf6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Bxc6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'd6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'f5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'b4'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'Nc3', 'Nf6', 'd4'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'd4', 'exd4', 'Nxd4', 'Bc5'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'd4', 'exd4', 'Nxd4', 'Qh4'),
-    ('e4', 'e6', 'd4', 'd5', 'Nc3', 'Bb4'),
-    ('e4', 'e6', 'd4', 'd5', 'Nc3', 'Nf6', 'Bg5', 'dxe4'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nc3', 'Bb4', 'a3', 'Bxc3+', 'bxc3'),
-    ('d4', 'Nf6', 'c4', 'e6', 'Nc3', 'Bb4', 'e3', 'c5', 'Ne2'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'Nf3', 'd6', 'g3'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'Be2', 'O-O', 'Bg5'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'Nf3', 'O-O', 'Be2'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'Nf3', 'O-O', 'Be2', 'e5', 'O-O', 'Nc6', 'd5', 'Ne7', 'b4'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'f3'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'f4'),
-    ('d4', 'Nf6', 'c4', 'g6', 'Nc3', 'd5', 'cxd5', 'Nxd5'),
-    ('d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Bg5', 'Be7', 'e3', 'O-O', 'Nf3', 'Nbd7'),
-    ('d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Nf3', 'c5'),
-    ('d4', 'f5', 'c4', 'Nf6', 'g3', 'e6', 'Bg2', 'Be7', 'Nf3', 'O-O', 'O-O', 'd5'),
-    ('d4', 'f5', 'c4', 'Nf6', 'g3', 'g6', 'Bg2', 'Bg7', 'Nf3'),
-    ('e4', 'c5', 'Nf3', 'Nc6', 'd4', 'cxd4', 'Nxd4', 'g6'),
-    ('e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'Nc6', 'Bg5'),
-    ('e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'),
-    ('e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'e6'),
-    ('e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'g6'),
-    ('e4', 'e5', 'Nf3', 'Nc6', 'd4', 'exd4', 'Nxd4', 'Nf6', 'Nxc6', 'bxc6', 'e5'),
-    ('e4', 'e5', 'Nf3', 'Nf6', 'Nxe5', 'd6', 'Nf3', 'Nxe4', 'd4'),
-}
-
 
 # Stockfish does 70m/s
 def eval_board(board):  # 25k/s
@@ -261,34 +138,6 @@ def gen_moves(board):
     ))
 
 
-def search_openings(board):  # 11k/s
-    _board = Board()
-    san_moves = []
-    for move in board.move_stack:
-        san_moves.append(_board.san(move))
-        _board.push(move)
-    san_moves = tuple(san_moves)
-    move_count = len(board.move_stack)
-    move_choices = {*()}
-    for opening in sorted([*OPENINGS.keys()], key=lambda opening: (len(opening),) + opening):
-        if len(opening) <= move_count:
-            continue
-        if opening[:move_count] == san_moves:
-            move_choices.add(opening[move_count])
-    if len(move_choices) != 0:
-        move_name = random_choice([*move_choices])
-        name = None
-        all_moves = san_moves + (move_name,)
-        for opening in sorted([*OPENINGS.keys()], key=lambda opening: (len(opening),) + opening):
-            if len(opening) <= move_count:
-                continue
-            if opening[:move_count + 1] == all_moves:
-                name = OPENINGS[opening]
-                break
-        return name, board.parse_san(move_name)
-    return None, None
-
-
 def move_search(board, depth, alpha=-inf, beta=inf):
     if depth == 0 or board.is_game_over():
         return eval_board(board), None
@@ -321,11 +170,7 @@ def move_search(board, depth, alpha=-inf, beta=inf):
         return value, best_move
 
 
-def move_engine(board: Board, /, depth=4, *, use_openings=True):
-    if use_openings:
-        name, move = search_openings(board)
-        if move is not None:
-            return move
+def move_engine(board: Board, /, depth=4):
     move = move_search(board, depth)[1]
     if move is None:
         move = random_choice([move for move in board.legal_moves])

@@ -23,6 +23,8 @@ from os.path import join, split
 from bot import move_engine
 from constants import *
 from function import get_surface
+from level import get_level_name, get_level
+from numchess import *
 
 
 __all__ = ['Game']
@@ -43,16 +45,31 @@ FONT = Font(join(folder, 'assets', 'ComicSans.ttf'), 64)
 
 
 class Game:
-    def __init__(self, level_selected=0):
+    def __init__(self, level_selected=0, deck=list[Piece]):
         self.size = DEFAULT_WINDOW_SIZE
         self.screen = get_surface(self.size)
 
         self.drag_rank = self.drag_file = -1
         self.drag_xpad = self.drag_ypad = 0
 
+        self.board = get_level(level_selected)
+
+        for rank in range(len(deck) // 8):
+            for file in range(8):
+                piece = deck[rank * 8 + file]
+                if piece is not None:
+                    self.board.set_piece_at((rank, file), piece)
+        king_file = self.board.king(WHITE)[1]
+        for i in range(king_file - 1, 8):
+            if (self.board.rooks & BB_RANK_1 & BB_FILES[i]).any():
+                self.board.castling_rights |= BB_RANK_1 & BB_FILES[i]
+                break
+        for i in range(king_file - 1, -1, -1):
+            if (self.board.rooks & BB_RANK_1 & BB_FILES[i]).any():
+                self.board.castling_rights |= BB_RANK_1 & BB_FILES[i]
+                break
+
         self.level_selected = level_selected
-        self.level_fen = CLASSIC_LEVELS[level_selected][1]
-        self.board = Board(self.level_fen)
         self.promotion_from_square = -1
         self.promotion_square = -1
         self.promotion_pressed = -1
@@ -123,7 +140,7 @@ class Game:
         self.level_text_num = FONT.render(
             f'Level {self.level_selected + 1}', 0, (255, 255, 255))
         self.level_text_name = FONT.render(
-            CLASSIC_LEVELS[self.level_selected][0], 0, (255, 255, 255))
+            get_level_name(self.level_selected), 0, (255, 255, 255))
         outcome = self.board.outcome()
         if outcome is not None:
             if outcome.winner == self.player_turn:
@@ -283,8 +300,7 @@ class Game:
                 self.update_menu()
             else:
                 self.draw()
-                bot_move = move_engine(
-                    self.board, use_openings=self.level_fen == STARTING_FEN)
+                bot_move = move_engine(self.board)
                 self.board.push(bot_move)
                 if self.board.is_game_over():
                     self.update_menu()

@@ -86,49 +86,49 @@ Partially inspired by [chess.com](https://www.chess.com/article/view/10-remarkab
 
 ### Adaptive Abilities
 
-- Cannon (BRQ)
-- - Capture only after leaping over one other piece.
+- Cannon (BRQ) NOT IMPLEMENTED
+- - Can capture after leaping over one other piece.
 - Sneaker: (NBR)
 - - Can move one square in any direction.
-- Shock (NBRQ)
+- Shock (NBRQ) NOT IMPLEMENTED
 - - When moved, for the next enemy move, enemy king cannot capture this piece.
 - Leaper (BRQ)
 - - Can move like a Knight.
 - Shifty (NR)
 - - Can move like a Bishop.
-- Chivalry (NBRQ)
+- Chivalry (NBRQ) NOT IMPLEMENTED
 - - When moved, for the next enemy move, enemy pawn cannot capture this piece.
 - Spooky (NBRQ)
 - - Cannot be captured by enemy king.
-- Ruthless (NB)
+- Ruthless (NB) NOT IMPLEMENTED
 - - Can move like a Rook.
-- Ranger (NBRQK)
+- Ranger (NBRQK) NOT IMPLEMENTED
 - - Can capture without moving onto the target square.
-- Rider (NBRQ)
+- Rider (NBRQ) NOT IMPLEMENTED
 - - Can moves/capture on any number of unblocked steps as a knight in the same direction.
-- Nostalgic (NBRQK)
+- Nostalgic (NBRQK) NOT IMPLEMENTED
 - - Can capture by stepping on the enemy piece's last square.
-- Poi-scent (NBRQK)
+- Poi-scent (NBRQK) NOT IMPLEMENTED
 - - When moved, for the next enemy move, enemy piece cannot move onto your piece's last square.
-- Shadow (NBRQ)
+- Shadow (NBRQ) NOT IMPLEMENTED
 - - When moved, for the next enemy move, enemy king cannot move onto squares that the piece previously can move to.
 
 ### Pawn Unique Abilities
 
-- Charger
+- Charger NOT IMPLEMENTED
 - - Moves/captures only one square forward.
-- Drunkard
+- Drunkard NOT IMPLEMENTED
 - - Moves one step diagonally forward, captures one square forward.
-- Soldier
+- Soldier NOT IMPLEMENTED
 - - Moves/captures one step forward or horizontally.
-- Sergeant
+- Sergeant NOT IMPLEMENTED
 - - Moves/captures one step forward or diagonally.
-- Berserker
+- Berserker NOT IMPLEMENTED
 - - Moves/captures one step forward, diagonally or horizontally.
 
 ### Pawn Abilities
 
-- Coward
+- Coward NOT IMPLEMENTED
 - - Can always move 2 squares ahead.
 - Expendable
 - - Can be captured by alleys.
@@ -137,27 +137,27 @@ Partially inspired by [chess.com](https://www.chess.com/article/view/10-remarkab
 - Explorer
 - - Can be placed on the 3rd or 6th rank.
 - Pacifist
-- - Cannot capture pawns or be captured by pawns
-- Pioneer
+- - Cannot capture enemy pawns or be captured by enemy pawns
+- Pioneer NOT IMPLEMENTED
 - - Can be placed on the 3rd, 4th, 5th, or 6th rank.
 
 ### King Abilities
 
-- Commander
+- Commander NOT IMPLEMENTED
 - - Allow back-rank piece order to be customizable.
-- Grimace
+- Grimace NOT IMPLEMENTED
 - - Can capture king on the same file without intervening pieces.
-- Barterer
+- Barterer NOT IMPLEMENTED
 - - If exist a move to check enemy after checkmate, the game is drawn.
-- Sluggard
+- Sluggard NOT IMPLEMENTED
 - - Can pass the move and force enemy to make a move.
-- Abomination
+- Abomination NOT IMPLEMENTED
 - - Can capture king on the same file or same rank without intervening pieces.
-- Panic
+- Panic NOT IMPLEMENTED
 - - Can make 2 moves when checked. The first move needn't move out of check.
-- Stubborn
+- Stubborn NOT IMPLEMENTED
 - - Can castle when checked or the crossing square is attacked.
-- Ghost
+- Ghost NOT IMPLEMENTED
 - - Stubborn, and can castle infinitely in any direction even if king or rook is moved.
 
 ## Art

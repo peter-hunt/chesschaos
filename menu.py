@@ -20,6 +20,7 @@ from random import choice as random_choice
 from constants import *
 from function import get_surface
 from game import Game
+from level import get_level_name, LEVEL_BOARDS
 from profile import Profile
 
 
@@ -63,13 +64,11 @@ profiles = get_profiles()
 class Window:
     def __init__(self):
         self.size = DEFAULT_WINDOW_SIZE
-        self.board = None
         self.screen = set_mode(self.size, RESIZABLE)
         set_icon(ICON)
         set_caption('ChessChaos')
 
         self.level_selected = -1
-        self.level_fen = CLASSIC_LEVELS[0][1]
         self.menu_page = 0
         self.menu_button_pressed = -1
 
@@ -130,11 +129,12 @@ class Window:
         self.menu_button_rects.append(
             Rect(mn_xpad + mn_width * 0.2, mn_ypad + mn_height / 48,
                  mn_width * 0.6, mn_height / 24))
-        for index in range(max(min(len(CLASSIC_LEVELS) - 10 * self.menu_page, 10), 0)):
-            self.menu_button_rects.append(
-                Rect(mn_xpad + mn_width * 0.1,
-                     mn_ypad + mn_height * (6 + index * 5) / 60,
-                     mn_width * 0.8, mn_height / 18))
+        if self.profile is not None:
+            for index in range(max(min(len(LEVEL_BOARDS) - 10 * self.menu_page, 10), 0)):
+                self.menu_button_rects.append(
+                    Rect(mn_xpad + mn_width * 0.1,
+                        mn_ypad + mn_height * (6 + index * 5) / 60,
+                        mn_width * 0.8, mn_height / 18))
         self.menu_button_rects.append(
             Rect(mn_xpad + mn_width * 0.2, mn_ypad + mn_height * 45 / 48,
                  mn_width * 0.6, mn_height / 24))
@@ -213,8 +213,10 @@ class Window:
             is_pressed = i == self.menu_button_pressed
             if i == 0:
                 is_pressed |= self.menu_page == 0
+                is_pressed |= self.profile is None
             elif i == len(self.menu_button_rects) - 1:
-                is_pressed |= (self.menu_page == ceil(len(CLASSIC_LEVELS) / 10) - 1)
+                is_pressed |= (self.menu_page == ceil(len(LEVEL_BOARDS) / 10) - 1)
+                is_pressed |= self.profile is None
             color_tune = is_selected - is_pressed
             if color_tune != 0:
                 color = (255, 255, 255, 30) if color_tune == 1 else (0, 0, 0, 30)
@@ -222,13 +224,13 @@ class Window:
 
             text_mask = get_surface((width, height), (0, 0, 0, 0))
 
-            level = index + 10 * self.menu_page + 1
+            level = index + 10 * self.menu_page
             if i == 0:
                 content = 'Last Page'
             elif i == len(self.menu_button_rects) - 1:
                 content = 'Next Page'
             else:
-                content = f'Level {level}'
+                content = get_level_name(level)
             text = FONT.render(content, 0, (255, 255, 255))
             max_width, max_height = width * 4 / 5, height * 3 / 4
             text_width, text_height = text.get_size()
@@ -302,10 +304,11 @@ class Window:
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
         self.draw_profile_menu()
+        if self.profile is not None:
+            self.draw_menu()
         if self.game is not None:
             self.game.draw()
             self.screen.blit(self.game.screen, (0, 0))
-            self.draw_menu()
 
         display_flip()
 
@@ -364,15 +367,13 @@ class Window:
                         self.menu_page -= 1
                         self.update()
                 elif self.menu_button_pressed == len(self.menu_button_rects) - 1:
-                    if self.menu_page != ceil(len(CLASSIC_LEVELS) / 10) - 1:
+                    if self.menu_page != ceil(len(LEVEL_BOARDS) / 10) - 1:
                         self.menu_page += 1
                         self.update()
                 elif self.menu_button_pressed - 1 + 10 * self.menu_page != self.level_selected:
                     self.level_selected = self.menu_button_pressed - 1 + 10 * self.menu_page
-                    self.level_fen = CLASSIC_LEVELS[self.level_selected][1]
-                    if self.game is not None:
-                        self.game = Game(self.level_selected)
-                        self.game.update()
+                    self.game = Game(self.level_selected, self.profile.deck)
+                    self.game.update()
             if self.profile_button_pressed != -1:
                 if self.profile_button_pressed == 0:
                     if self.profile_page != 0:
@@ -394,6 +395,8 @@ class Window:
                     self.profile = Profile(name)
                     self.profile.dump()
                     profiles = get_profiles()
+                    self.profile_selected = 0
+                    self.menu_page = 0
                     self.update()
                 else:
                     profile_index = self.profile_button_pressed + 7 * self.profile_page - 2
@@ -403,6 +406,7 @@ class Window:
                             self.profile.dump()
                         profiles = get_profiles()
                         self.profile = Profile.load(profiles[profile_index])
+                        self.menu_page = 0
                         self.update()
             self._lmb_up()
 
