@@ -1,4 +1,5 @@
 .vscode
+saves/*
 build
 chesschaos.egg-info
 dist

@@ -15,7 +15,7 @@ PIECE_NAMES = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
 Color = bool
 # BUG: Color Code in use is reversed
 COLORS = [WHITE, BLACK] = [True, False]
-COLOR_NAMES = ['white', 'black']
+COLOR_NAMES = ['black', 'white']
 
 Square = tuple[int, int]
 SQUARES = [
