@@ -1,10 +1,7 @@
-from chess import (
-    BB_SQUARES, WHITE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING)
-from chess import Board
-from chess.polyglot import zobrist_hash as hash_board
-Board.__hash__ = hash_board
+from numchess import (
+    BB_SQUARES, SQUARES, WHITE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING)
+from numchess import Board
 
-from functools import lru_cache
 from math import inf
 from random import choice as random_choice
 
@@ -129,12 +126,11 @@ def cmp(a, b):  # 410k/s
     return (a > b) - (a < b)
 
 
-@lru_cache()
 def gen_moves(board):
     return sorted(list(board.legal_moves), key=lambda move: (
         -(move.promotion is not None),
-        -(BB_SQUARES[move.to_square] & board.occupied),
-        -(BB_SQUARES[move.to_square] & board.pawns),
+        ~(BB_SQUARES[SQUARES.index(move.to_square)] & board.occupied).any(),
+        ~(BB_SQUARES[SQUARES.index(move.to_square)] & board.pawns).any(),
     ))
 
 
@@ -170,7 +166,7 @@ def move_search(board, depth, alpha=-inf, beta=inf):
         return value, best_move
 
 
-def move_engine(board: Board, /, depth=4):
+def move_engine(board: Board, /, depth=3):
     move = move_search(board, depth)[1]
     if move is None:
         move = random_choice([move for move in board.legal_moves])

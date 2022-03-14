@@ -1,5 +1,5 @@
 
-from chess import COLOR_NAMES, PIECE_NAMES
+from numchess import COLOR_NAMES, PIECE_NAMES
 
 from pygame.constants import (
     MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT, RESIZABLE)

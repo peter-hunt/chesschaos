@@ -2,7 +2,7 @@ from numpy import arange, array, ndarray, ones, where, zeros
 
 from dataclasses import dataclass, field
 from enum import Enum, auto as enumauto
-from typing import Iterable, Iterator, Optional
+from typing import Hashable, Iterable, Iterator, Optional
 
 from abilities import *
 from constants import *
@@ -13,6 +13,7 @@ PIECE_TYPES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING] = range(6)
 PIECE_NAMES = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
 
 Color = bool
+# BUG: Color Code in use is reversed
 COLORS = [WHITE, BLACK] = [True, False]
 COLOR_NAMES = ['white', 'black']
 
@@ -35,44 +36,25 @@ SQUARE_NAMES = {(ri, fi): f + r
 
 
 class Termination(Enum):
-    """Enum with reasons for a game to be over."""
-
     CHECKMATE = enumauto()
-    """See :func:`chess.Board.is_checkmate()`."""
     STALEMATE = enumauto()
-    """See :func:`chess.Board.is_stalemate()`."""
     SEVENTYFIVE_MOVES = enumauto()
-    """See :func:`chess.Board.is_seventyfive_moves()`."""
     FIVEFOLD_REPETITION = enumauto()
-    """See :func:`chess.Board.can_claim_threefold_repetition()`."""
 
 
 @dataclass
 class Outcome:
-    """
-    Information about the outcome of an ended game, usually obtained from
-    :func:`chess.Board.outcome()`.
-    """
-
     termination: Termination
-    """The reason for the game to have ended."""
-
     winner: Optional[Color]
-    """The winning color or ``None`` if drawn."""
 
     def result(self) -> str:
-        """Returns ``1-0``, ``0-1`` or ``1/2-1/2``."""
-        return "1/2-1/2" if self.winner is None else ("1-0" if self.winner else "0-1")
+        return '1/2-1/2' if self.winner is None else ('1-0' if self.winner else '0-1')
 
 
 def square_distance(a: Square, b: Square) -> int:
-    """
-    Gets the distance (i.e., the number of king steps) from square *a* to *b*.
-    """
     return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
 def square_mirror(square: Square) -> Square:
-    """Mirrors the square vertically."""
     return (square[0], 7 - square[1])
 
 SQUARES_180 = [square_mirror(sq) for sq in SQUARES]
@@ -131,7 +113,7 @@ BB_RANKS = [
     )[-1]
     for r in range(8)
 ]
-BB_TO_FLAG = arange(64, dtype='int64').reshape((8, 8))
+BB_TO_FLAG = 2 ** arange(64, dtype='int64').reshape((8, 8))
 
 BB_BACKRANKS = BB_RANK_1 | BB_RANK_8
 
@@ -229,30 +211,28 @@ def shift_down_right(b: BoolBoard) -> BoolBoard:
     return new
 
 
-def _sliding_attacks(square: Square, occupied: BoolBoard, deltas: Iterable[int],
-                     rider: bool = False) -> BoolBoard:
-    attacks = BB_EMPTY
+def _sliding_attacks(square: Square, occupied: BoolBoard, deltas: Iterable[int]) -> BoolBoard:
+    attacks = BB_EMPTY.copy()
 
     for delta in deltas:
         sq = SQUARES.index(square)
 
         while True:
             sq += delta
-            if not (0 <= sq < 64) or (not rider and square_distance(SQUARES[sq], SQUARES[sq - delta]) > 2):
+            if not (0 <= sq < 64) or square_distance(SQUARES[sq], SQUARES[sq - delta]) > 2:
                 break
 
             attacks |= BB_SQUARES[sq]
 
-            if (occupied & BB_SQUARES[sq]).any():
+            if occupied[SQUARES[sq]]:
                 break
 
     return attacks
 
-def _step_attacks(square: Square, deltas: Iterable[int], rider: bool = False) -> BoolBoard:
-    return _sliding_attacks(square, BB_ALL, deltas, rider)
+def _step_attacks(square: Square, deltas: Iterable[int]) -> BoolBoard:
+    return _sliding_attacks(square, BB_ALL, deltas)
 
 BB_KNIGHT_ATTACKS = [_step_attacks(sq, [17, 15, 10, 6, -17, -15, -10, -6]) for sq in SQUARES]
-BB_RIDER_ATTACKS = [_step_attacks(sq, [17, 15, 10, 6, -17, -15, -10, -6], True) for sq in SQUARES]
 BB_KING_ATTACKS = [_step_attacks(sq, [9, 8, 7, 1, -9, -8, -7, -1]) for sq in SQUARES]
 BB_PAWN_ATTACKS = [[_step_attacks(sq, deltas) for sq in SQUARES] for deltas in [[-7, -9], [7, 9]]]
 BB_PAWN_ATTACKS = [[_step_attacks(sq, deltas) for sq in SQUARES] for deltas in [[-7, -9], [7, 9]]]
@@ -272,14 +252,14 @@ def _carry_rippler(mask: BoolBoard) -> Iterator[BoolBoard]:
         if not subset:
             break
 
-def _attack_table(deltas: list[int]) -> tuple[list[BoolBoard], list[dict[BoolBoard, BoolBoard]]]:
+def _attack_table(deltas: list[int]) -> tuple[list[BoolBoard], list[dict[int, BoolBoard]]]:
     mask_table = []
     attack_table = []
 
     for square in SQUARES:
         attacks = {}
 
-        mask = _sliding_attacks(square, 0, deltas) & ~_edges(square)
+        mask = _sliding_attacks(square, BB_EMPTY.copy(), deltas) & ~_edges(square)
         for subset in _carry_rippler(mask):
             attacks[(BB_TO_FLAG * subset).sum()] = _sliding_attacks(square, subset, deltas)
 
@@ -291,6 +271,7 @@ def _attack_table(deltas: list[int]) -> tuple[list[BoolBoard], list[dict[BoolBoa
 BB_DIAG_MASKS, BB_DIAG_ATTACKS = _attack_table([-9, -7, 7, 9])
 BB_FILE_MASKS, BB_FILE_ATTACKS = _attack_table([-8, 8])
 BB_RANK_MASKS, BB_RANK_ATTACKS = _attack_table([-1, 1])
+BB_RIDER_MASKS, BB_RIDER_ATTACKS = _attack_table([17, 15, 10, 6, -17, -15, -10, -6])
 
 
 def _rays() -> list[list[BoolBoard]]:
@@ -304,8 +285,10 @@ def _rays() -> list[list[BoolBoard]]:
                 rays_row.append(BB_RANK_ATTACKS[a][0] | bb_a)
             elif (BB_FILE_ATTACKS[a][0] & bb_b).any():
                 rays_row.append(BB_FILE_ATTACKS[a][0] | bb_a)
+            elif (BB_RIDER_ATTACKS[a][0] & bb_b).any():
+                rays_row.append(BB_RIDER_ATTACKS[a][0] | bb_a)
             else:
-                rays_row.append(BB_EMPTY)
+                rays_row.append(BB_EMPTY.copy())
         rays.append(rays_row)
     return rays
 
@@ -332,7 +315,7 @@ UB_EMPTY = zeros((8, 8), dtype='int8')
 @dataclass
 class Piece:
     piece_type: int
-    color: int = 1
+    color: int = WHITE
     abilities: int = B_NONE
     unique_ability: int = B_NONE
 
@@ -349,39 +332,39 @@ class Move:
 
 class Board:
     turn: Color = WHITE
-    pawns: BoolBoard = BB_EMPTY
-    knights: BoolBoard = BB_EMPTY
-    bishops: BoolBoard = BB_EMPTY
-    rooks: BoolBoard = BB_EMPTY
-    queens: BoolBoard = BB_EMPTY
-    kings: BoolBoard = BB_EMPTY
-    occupied_co: list[BoolBoard] = [BB_EMPTY, BB_EMPTY]
-    occupied: BoolBoard = BB_EMPTY
+    pawns: BoolBoard = BB_EMPTY.copy()
+    knights: BoolBoard = BB_EMPTY.copy()
+    bishops: BoolBoard = BB_EMPTY.copy()
+    rooks: BoolBoard = BB_EMPTY.copy()
+    queens: BoolBoard = BB_EMPTY.copy()
+    kings: BoolBoard = BB_EMPTY.copy()
+    occupied_co: list[BoolBoard] = [BB_EMPTY.copy(), BB_EMPTY.copy()]
+    occupied: BoolBoard = BB_EMPTY.copy()
 
     abilities: AbBoard = AB_EMPTY
     unique_ability: UnqAbBoard = UB_EMPTY
 
-    castling_rights: BoolBoard = BB_EMPTY
+    castling_rights: BoolBoard = BB_EMPTY.copy()
     last_move: Optional[Move] = None
     halfmove_clock: int = 0
     move_stack: list[Move] = []
 
     def clear_board(self) -> None:
-        self.pawns = BB_EMPTY
-        self.knights = BB_EMPTY
-        self.bishops = BB_EMPTY
-        self.rooks = BB_EMPTY
-        self.queens = BB_EMPTY
-        self.kings = BB_EMPTY
+        self.pawns = BB_EMPTY.copy()
+        self.knights = BB_EMPTY.copy()
+        self.bishops = BB_EMPTY.copy()
+        self.rooks = BB_EMPTY.copy()
+        self.queens = BB_EMPTY.copy()
+        self.kings = BB_EMPTY.copy()
 
-        self.occupied_co[WHITE] = BB_EMPTY
-        self.occupied_co[BLACK] = BB_EMPTY
-        self.occupied = BB_EMPTY
+        self.occupied_co[BLACK] = BB_EMPTY.copy()
+        self.occupied_co[WHITE] = BB_EMPTY.copy()
+        self.occupied = BB_EMPTY.copy()
 
         self.abilities = AB_EMPTY
-        self.unique_abilities = UB_EMPTY
+        self.unique_ability = UB_EMPTY
 
-        self.castling_rights = BB_EMPTY
+        self.castling_rights = BB_EMPTY.copy()
         self.last_move = None
         self.halfmove_clock = 0
         self.move_stack.clear()
@@ -389,18 +372,15 @@ class Board:
     def piece_at(self, square: Square) -> Optional[Piece]:
         piece_type = self.piece_type_at(square)
         if piece_type is not None:
-            mask = BB_SQUARES[SQUARES.index(square)]
-            color = (self.occupied_co[WHITE] & mask).any()
+            color = self.occupied_co[WHITE][square]
             return Piece(piece_type, color, self.abilities[square],
-                         self.unique_abilities[square])
-        else:
-            return None
+                         self.unique_ability[square])
 
     def piece_type_at(self, square: Square) -> Optional[PieceType]:
         mask = BB_SQUARES[SQUARES.index(square)]
 
-        if not (self.occupied & mask).any():
-            return None
+        if not self.occupied[square]:
+            return
         elif (self.pawns & mask).any():
             return PAWN
         elif (self.knights & mask).any():
@@ -415,30 +395,53 @@ class Board:
             return KING
 
     def color_at(self, square: Square) -> Optional[Color]:
-        mask = BB_SQUARES[SQUARES.index(square)]
-        if (self.occupied_co[WHITE] & mask).any():
+        if self.occupied_co[WHITE][square]:
             return WHITE
-        elif (self.occupied_co[BLACK] & mask).any():
+        elif self.occupied_co[BLACK][square]:
             return BLACK
-        else:
-            return None
+
+    @property
+    def legal_moves(self):
+        return LegalMoveGenerator(self)
+
+    def get_ep_square(self) -> Optional[Move]:
+        ep_square = None
+        if self.last_move is not None:
+            lm_from, lm_to = self.last_move.from_square, self.last_move.to_square
+            if abs(lm_to[0] - lm_from[0]) == 2 or abs(lm_to[1] - lm_from[1]) == 2:
+                ep_square = (lm_to[0] + lm_from[0]) // 2, (lm_to[1] + lm_from[1]) // 2
+        return ep_square
 
     def king(self, color: Color) -> Optional[Square]:
-        """
-        Finds the king square of the given side. Returns ``None`` if there
-        is no king of that color.
-
-        In variants with king promotions, only non-promoted kings are
-        considered.
-        """
         king_mask = self.occupied_co[color] & self.kings
         return SQUARES[msb(king_mask)] if king_mask.any() else None
+
+    def attacks_mask(self, square: Square) -> BoolBoard:
+        square_index = SQUARES.index(square)
+        bb_square = BB_SQUARES[square_index]
+
+        if (bb_square & self.pawns).any():
+            color = self.occupied_co[WHITE][square_index]
+            return BB_PAWN_ATTACKS[color][square_index]
+        elif (bb_square & self.knights).any():
+            return BB_KNIGHT_ATTACKS[square_index]
+        elif (bb_square & self.kings).any():
+            return BB_KING_ATTACKS[square_index]
+        else:
+            attacks = 0
+            if (bb_square & self.bishops).any() or (bb_square & self.queens).any():
+                attacks = BB_DIAG_ATTACKS[square_index][(BB_TO_FLAG * (BB_DIAG_MASKS[square_index] & self.occupied)).sum()]
+            if (bb_square & self.rooks).any() or (bb_square & self.queens).any():
+                attacks |= (BB_RANK_ATTACKS[square_index][(BB_TO_FLAG * (BB_RANK_MASKS[square_index] & self.occupied)).sum()] |
+                            BB_FILE_ATTACKS[square_index][(BB_TO_FLAG * (BB_FILE_MASKS[square_index] & self.occupied)).sum()])
+            return attacks
 
     def _attackers_mask(self, color: Color, square: Square, occupied: BoolBoard) -> BoolBoard:
         index = SQUARES.index(square)
         rank_pieces = BB_RANK_MASKS[index] & occupied
         file_pieces = BB_FILE_MASKS[index] & occupied
         diag_pieces = BB_DIAG_MASKS[index] & occupied
+        rider_pieces = BB_RIDER_MASKS[index] & occupied
 
         kings = self.kings | (self.abilities & B_SNEAKER).astype(bool)
         riders = (self.abilities & B_RIDER).astype(bool)
@@ -448,11 +451,11 @@ class Board:
 
         attackers = (
             (BB_KING_ATTACKS[index] & kings) |
-            (BB_RIDER_ATTACKS[index] & riders) |
             (BB_KNIGHT_ATTACKS[index] & knights) |
             (BB_RANK_ATTACKS[index][(BB_TO_FLAG * rank_pieces).sum()] & queens_and_rooks) |
             (BB_FILE_ATTACKS[index][(BB_TO_FLAG * file_pieces).sum()] & queens_and_rooks) |
             (BB_DIAG_ATTACKS[index][(BB_TO_FLAG * diag_pieces).sum()] & queens_and_bishops) |
+            (BB_RIDER_ATTACKS[index][(BB_TO_FLAG * rider_pieces).sum()] & riders) |
             (BB_PAWN_ATTACKS[not color][index] & self.pawns))
 
         return attackers & self.occupied_co[color]
@@ -460,11 +463,37 @@ class Board:
     def attackers_mask(self, color: Color, square: Square) -> BoolBoard:
         return self._attackers_mask(color, square, self.occupied)
 
-    def remove_piece_at(self, square: Square) -> Optional[PieceType]:
+    def is_attacked_by(self, color: Color, square: Square) -> bool:
+        return (self.attackers_mask(color, square)).any()
+
+    def pin_mask(self, color: Color, square: Square) -> BoolBoard:
+        king = self.king(color)
+        if king is None:
+            return BB_ALL.copy()
+
+        square_mask = BB_SQUARES[SQUARES.index(square)]
+
+        riders = (self.abilities & B_RIDER).astype(bool)
+        for attacks, sliders in [(BB_FILE_ATTACKS, self.rooks | self.queens),
+                                 (BB_RANK_ATTACKS, self.rooks | self.queens),
+                                 (BB_DIAG_ATTACKS, self.bishops | self.queens),
+                                 (BB_RIDER_ATTACKS, riders)]:
+            rays = attacks[king][0]
+            if rays & square_mask:
+                snipers = rays & sliders & self.occupied_co[not color]
+                for sniper in scan_reversed(snipers):
+                    if between(sniper, king) & (self.occupied | square_mask) == square_mask:
+                        return ray(king, sniper)
+
+                break
+
+        return BB_ALL.copy()
+
+    def remove_piece_at(self, square: Square) -> Optional[Piece]:
         mask = BB_SQUARES[SQUARES.index(square)]
-        if not (self.occupied & mask).any():
-            return None
-        color = (self.occupied_co[WHITE] & mask).any()
+        if not self.occupied[square]:
+            return
+        color = self.occupied_co[WHITE][square]
 
         if (self.pawns & mask).any():
             self.pawns[square] = False
@@ -492,7 +521,7 @@ class Board:
         self.abilities[square] = 0
         self.unique_ability[square] = 0
 
-        return Piece(piece_type, square, abilities, unique_ability)
+        return Piece(piece_type, color, abilities, unique_ability)
 
     def set_piece_at(self, square: Square, piece: Optional[Piece]):
         self.remove_piece_at(square)
@@ -518,8 +547,8 @@ class Board:
         else:
             return
 
-        self.occupied ^= mask
-        self.occupied_co[piece.color] ^= mask
+        self.occupied[square] = True
+        self.occupied_co[piece.color][square] = True
 
         self.abilities[square] = piece.abilities
         self.unique_ability[square] = piece.unique_ability
@@ -547,58 +576,44 @@ class Board:
     __copy__ = copy
 
     def clean_castling_rights(self) -> BoolBoard:
-        """
-        Returns valid castling rights filtered from
-        :data:`~chess.Board.castling_rights`.
-        """
-
         castling = self.castling_rights & self.rooks
         white_castling = castling & BB_RANK_1 & self.occupied_co[WHITE]
         black_castling = castling & BB_RANK_8 & self.occupied_co[BLACK]
 
-        if not self.chess960:
-            # The rooks must be on a1, h1, a8 or h8.
-            white_castling &= (BB_A1 | BB_H1)
-            black_castling &= (BB_A8 | BB_H8)
+        # The kings must be on the back rank.
+        white_king_mask = self.occupied_co[WHITE] & self.kings & BB_RANK_1
+        black_king_mask = self.occupied_co[BLACK] & self.kings & BB_RANK_8
+        if not white_king_mask.any():
+            white_castling = BB_EMPTY.copy()
+        if not black_king_mask.any():
+            black_castling = BB_EMPTY.copy()
 
-            # The kings must be on e1 or e8.
-            if not self.occupied_co[WHITE] & self.kings & BB_E1:
-                white_castling = 0
-            if not self.occupied_co[BLACK] & self.kings & BB_E8:
-                black_castling = 0
+        # There are only two ways of castling, a-side and h-side, and the
+        # king must be between the rooks.
+        white_a_side = white_castling & ~white_castling
+        white_h_side = BB_SQUARES[msb(white_castling)] if white_castling.any() else BB_EMPTY.copy()
 
-            return white_castling | black_castling
-        else:
-            # The kings must be on the back rank.
-            white_king_mask = self.occupied_co[WHITE] & self.kings & BB_RANK_1
-            black_king_mask = self.occupied_co[BLACK] & self.kings & BB_RANK_8
-            if not white_king_mask:
-                white_castling = 0
-            if not black_king_mask:
-                black_castling = 0
+        if white_a_side.any() and msb(white_a_side) > msb(white_king_mask):
+            white_a_side = 0
+        if white_h_side.any() and msb(white_h_side) < msb(white_king_mask):
+            white_h_side = 0
 
-            # There are only two ways of castling, a-side and h-side, and the
-            # king must be between the rooks.
-            white_a_side = white_castling & -white_castling
-            white_h_side = BB_SQUARES[msb(white_castling)] if white_castling else 0
+        black_a_side = black_castling & ~black_castling
+        black_h_side = BB_SQUARES[msb(black_castling)] if black_castling.any() else BB_EMPTY.copy()
 
-            if white_a_side and msb(white_a_side) > msb(white_king_mask):
-                white_a_side = 0
-            if white_h_side and msb(white_h_side) < msb(white_king_mask):
-                white_h_side = 0
+        if black_a_side.any() and msb(black_a_side) > msb(black_king_mask):
+            black_a_side = 0
+        if black_h_side.any() and msb(black_h_side) < msb(black_king_mask):
+            black_h_side = 0
 
-            black_a_side = (black_castling & -black_castling)
-            black_h_side = BB_SQUARES[msb(black_castling)] if black_castling else BB_EMPTY
+        # Done.
+        return black_a_side | black_h_side | white_a_side | white_h_side
 
-            if black_a_side and msb(black_a_side) > msb(black_king_mask):
-                black_a_side = 0
-            if black_h_side and msb(black_h_side) < msb(black_king_mask):
-                black_h_side = 0
-
-            # Done.
-            return black_a_side | black_h_side | white_a_side | white_h_side
-
-    def generate_pseudo_legal_moves(self, from_mask: BoolBoard = BB_ALL, to_mask: BoolBoard = BB_ALL) -> Iterator[Move]:
+    def generate_pseudo_legal_moves(self, from_mask: Optional[BoolBoard] = None, to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
         our_pieces = self.occupied_co[self.turn] ^ (
             self.abilities & B_EXPENDABLE).astype(bool)
 
@@ -610,20 +625,21 @@ class Board:
                 yield Move(from_square, to_square)
 
         # Generate castling moves.
-        if from_mask & self.kings:
+        if (from_mask & self.kings).any():
             yield from self.generate_castling_moves(from_mask, to_mask)
 
         # The remaining moves are all pawn moves.
         pawns = self.pawns & self.occupied_co[self.turn] & from_mask
-        if not pawns:
+        if not pawns.any():
             return
 
         # Generate pawn captures.
         capturers = pawns
         for from_square in scan_reversed(capturers):
             targets = (
-                BB_PAWN_ATTACKS[self.turn][SQUARES.index[from_square]] &
-                self.occupied_co[not self.turn] & to_mask)
+                BB_PAWN_ATTACKS[self.turn][SQUARES.index(from_square)] &
+                (self.occupied_co[not self.turn] |
+                 (self.abilities & B_EXPENDABLE).astype(bool)) & to_mask)
 
             for to_square in scan_reversed(targets):
                 if to_square[0] in [0, 7]:
@@ -675,8 +691,13 @@ class Board:
         # Generate en passant captures.
         yield from self.generate_pseudo_legal_ep(from_mask, to_mask)
 
-    def generate_pseudo_legal_ep(self, from_mask: BoolBoard = BB_ALL,
-                                 to_mask: BoolBoard = BB_ALL) -> Iterator[Move]:
+    def generate_pseudo_legal_ep(self, from_mask: Optional[BoolBoard] = None,
+                                 to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
+
         if self.last_move is None:
             return
         if self.piece_type_at(self.last_move.to_square) != PAWN:
@@ -687,10 +708,10 @@ class Board:
         else:
             return
 
-        if not BB_SQUARES[ep_square] & to_mask:
+        if not (BB_SQUARES[ep_square] & to_mask).any():
             return
 
-        if BB_SQUARES[ep_square] & self.occupied:
+        if (BB_SQUARES[ep_square] & self.occupied).any():
             return
 
         capturers = (
@@ -704,12 +725,18 @@ class Board:
     def _attacked_for_king(self, path: BoolBoard, occupied: BoolBoard) -> bool:
         return any(self._attackers_mask(not self.turn, sq, occupied) for sq in scan_reversed(path))
 
-    def generate_castling_moves(self, from_mask: BoolBoard = BB_ALL, to_mask: BoolBoard = BB_ALL) -> Iterator[Move]:
+    def generate_castling_moves(self, from_mask: Optional[BoolBoard] = None,
+                                to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
+
         backrank = BB_RANK_1 if self.turn == WHITE else BB_RANK_8
         king = self.occupied_co[self.turn] & self.kings & backrank & from_mask
-        king &= -king
+        king &= ~king
         king_sq = self.king(self.turn)
-        if not king:
+        if not king.any():
             return
 
         bb_c = BB_FILE_C & backrank
@@ -738,32 +765,27 @@ class Board:
                     yield Move(SQUARES[msb(king)], candidate)
 
     def _to_chess960(self, move: Move) -> Move:
-        if move.from_square == E1 and self.kings & BB_E1:
-            if move.to_square == G1 and not self.rooks & BB_G1:
+        if move.from_square == E1 and (self.kings & BB_E1).any():
+            if move.to_square == G1 and not (self.rooks & BB_G1).any():
                 return Move(E1, H1)
-            elif move.to_square == C1 and not self.rooks & BB_C1:
+            elif move.to_square == C1 and not (self.rooks & BB_C1).any():
                 return Move(E1, A1)
-        elif move.from_square == E8 and self.kings & BB_E8:
-            if move.to_square == G8 and not self.rooks & BB_G8:
+        elif move.from_square == E8 and (self.kings & BB_E8).any():
+            if move.to_square == G8 and not (self.rooks & BB_G8).any():
                 return Move(E8, H8)
-            elif move.to_square == C8 and not self.rooks & BB_C8:
+            elif move.to_square == C8 and not (self.rooks & BB_C8).any():
                 return Move(E8, A8)
 
         return move
 
     def checkers_mask(self) -> BoolBoard:
         king = self.king(self.turn)
-        return BB_EMPTY if king is None else self.attackers_mask(not self.turn, king)
+        return BB_EMPTY.copy() if king is None else self.attackers_mask(not self.turn, king)
 
     def is_check(self) -> bool:
-        """Tests if the current side to move is in check."""
-        return bool(self.checkers_mask())
+        return self.checkers_mask().any()
 
     def gives_check(self, move: Move) -> bool:
-        """
-        Probes if the given move would put the opponent in check. The move
-        must be at least pseudo-legal.
-        """
         self.push(move)
         try:
             return self.is_check()
@@ -777,7 +799,9 @@ class Board:
 
         # If already in check, look if it is an evasion.
         checkers = self.attackers_mask(not self.turn, king)
-        if checkers and move not in self._generate_evasions(king, checkers, BB_SQUARES[move.from_square], BB_SQUARES[move.to_square]):
+        if checkers.any() and move not in self._generate_evasions(
+                king, checkers, BB_SQUARES[SQUARES.index(move.from_square)],
+                BB_SQUARES[SQUARES.index(move.to_square)]):
             return True
 
         return not self._is_safe(king, self._slider_blockers(king), move)
@@ -804,11 +828,11 @@ class Board:
                         return False
 
         # Get square masks.
-        from_mask = BB_SQUARES[move.from_square]
-        to_mask = BB_SQUARES[move.to_square]
+        from_mask = BB_SQUARES[SQUARES.index(move.from_square)]
+        to_mask = BB_SQUARES[SQUARES.index(move.to_square)]
 
         # Check turn.
-        if not self.occupied_co[self.turn] & from_mask:
+        if not (self.occupied_co[self.turn] & from_mask).any():
             return False
 
         # Only pawns can promote and only on the backrank.
@@ -834,7 +858,7 @@ class Board:
                 return True
 
         # Destination square can not be occupied.
-        if self.occupied_co[self.turn] & to_mask:
+        if (self.occupied_co[self.turn] & to_mask).any():
             return False
 
         # Handle pawn moves.
@@ -842,7 +866,7 @@ class Board:
             return move in self.generate_pseudo_legal_moves(from_mask, to_mask)
 
         # Handle all other pieces.
-        return bool(self.attacks_mask(move.from_square) & to_mask)
+        return (self.attacks_mask(move.from_square) & to_mask).any()
 
     def is_legal(self, move: Move) -> bool:
         return self.is_pseudo_legal(move) and not self.is_into_check(move)
@@ -851,27 +875,6 @@ class Board:
         return self.outcome(claim_draw=claim_draw) is not None
 
     def outcome(self, *, claim_draw: bool = False) -> Optional[Outcome]:
-        """
-        Checks if the game is over due to
-        :func:`checkmate <chess.Board.is_checkmate()>`,
-        :func:`stalemate <chess.Board.is_stalemate()>`,
-        :func:`insufficient material <chess.Board.is_insufficient_material()>`,
-        the :func:`seventyfive-move rule <chess.Board.is_seventyfive_moves()>`,
-        :func:`fivefold repetition <chess.Board.is_fivefold_repetition()>`,
-        or a :func:`variant end condition <chess.Board.is_variant_end()>`.
-        Returns the :class:`chess.Outcome` if the game has ended, otherwise
-        ``None``.
-
-        Alternatively, use :func:`~chess.Board.is_game_over()` if you are not
-        interested in who won the game and why.
-
-        The game is not considered to be over by the
-        :func:`fifty-move rule <chess.Board.can_claim_fifty_moves()>` or
-        :func:`threefold repetition <chess.Board.can_claim_threefold_repetition()>`,
-        unless *claim_draw* is given. Note that checking the latter can be
-        slow.
-        """
-
         # Normal game end.
         if self.is_checkmate():
             return Outcome(Termination.CHECKMATE, not self.turn)
@@ -883,17 +886,15 @@ class Board:
         if self.is_fivefold_repetition():
             return Outcome(Termination.FIVEFOLD_REPETITION, None)
 
-        return None
+        return
 
     def is_checkmate(self) -> bool:
-        """Checks if the current position is a checkmate."""
         if not self.is_check():
             return False
 
         return not any(self.generate_legal_moves())
 
     def is_stalemate(self) -> bool:
-        """Checks if the current position is a stalemate."""
         if self.is_check():
             return False
 
@@ -903,46 +904,12 @@ class Board:
         return self.halfmove_clock >= n and any(self.generate_legal_moves())
 
     def is_seventyfive_moves(self) -> bool:
-        """
-        Since the 1st of July 2014, a game is automatically drawn (without
-        a claim by one of the players) if the half-move clock since a capture
-        or pawn move is equal to or greater than 150. Other means to end a game
-        take precedence.
-        """
         return self._is_halfmoves(150)
 
     def is_fivefold_repetition(self) -> bool:
-        """
-        Since the 1st of July 2014 a game is automatically drawn (without
-        a claim by one of the players) if a position occurs for the fifth time.
-        Originally this had to occur on consecutive alternating moves, but
-        this has since been revised.
-        """
         return self.is_repetition(5)
 
     def is_repetition(self, count: int = 3) -> bool:
-        """
-        Checks if the current position has repeated 3 (or a given number of)
-        times.
-
-        Unlike :func:`~chess.Board.can_claim_threefold_repetition()`,
-        this does not consider a repetition that can be played on the next
-        move.
-
-        Note that checking this can be slow: In the worst case, the entire
-        game has to be replayed because there is no incremental transposition
-        table.
-        """
-        # Fast check, based on occupancy only.
-        maybe_repetitions = 1
-        for state in reversed(self._stack):
-            if state.occupied == self.occupied:
-                maybe_repetitions += 1
-                if maybe_repetitions >= count:
-                    break
-        if maybe_repetitions < count:
-            return False
-
         # Check full replay.
         transposition_key = self._transposition_key()
         switchyard = []
@@ -969,49 +936,33 @@ class Board:
 
         return False
 
+    def is_en_passant(self, move: Move) -> bool:
+        ep_square = self.get_ep_square()
+        if ep_square is None:
+            return False
+        return (ep_square == move.to_square and
+                self.pawns & BB_SQUARES[SQUARES.index(move.from_square)].any() and
+                abs(move.to_square - move.from_square) in {7, 8, 9} and
+                not self.occupied[move.to_square])
+
     def is_zeroing(self, move: Move) -> bool:
-        """Checks if the given pseudo-legal move is a capture or pawn move."""
-        touched = BB_SQUARES[move.from_square] ^ BB_SQUARES[move.to_square]
-        return bool(touched & self.pawns or touched & self.occupied_co[not self.turn])
+        touched = BB_SQUARES[SQUARES.index(move.from_square)] ^ BB_SQUARES[SQUARES.index(move.to_square)]
+        return (touched & self.pawns).any() or (touched & self.occupied_co[not self.turn]).any()
+
+    def is_castling(self, move: Move) -> bool:
+        if (self.kings & BB_SQUARES[SQUARES.index(move.from_square)]).any():
+            diff = move.from_square[1] - move.to_square[1]
+            return abs(diff) > 1 or (self.rooks & self.occupied_co[self.turn] & BB_SQUARES[SQUARES.index(move.to_square)]).any()
+        return False
 
     def push(self, move: Move) -> None:
-        """
-        Updates the position with the given *move* and puts it onto the
-        move stack.
-
-        >>> import chess
-        >>>
-        >>> board = chess.Board()
-        >>>
-        >>> Nf3 = chess.Move.from_uci("g1f3")
-        >>> board.push(Nf3)  # Make the move
-
-        >>> board.pop()  # Unmake the last move
-        Move.from_uci('g1f3')
-
-        Null moves just increment the move counters, switch turns and forfeit
-        en passant capturing.
-
-        .. warning::
-            Moves are not checked for legality. It is the caller's
-            responsibility to ensure that the move is at least pseudo-legal or
-            a null move.
-        """
         # Push move and remember board state.
         move = self._to_chess960(move)
         self.castling_rights = self.clean_castling_rights()  # Before pushing stack
         self.move_stack.append(move)
 
-        ep_square = None
-        if self.last_move is not None:
-            lm_from, lm_to = self.last_move.from_square, self.last_move.to_square
-            if abs(lm_to[0] - lm_from[0]) == 2 or abs(lm_to[1] - lm_from[1]) == 2:
-                ep_square = (lm_to[0] + lm_from[0]) // 2, (lm_to[1] + lm_from[1]) // 2
-
         # Increment move counters.
         self.halfmove_clock += 1
-        if self.turn == BLACK:
-            self.fullmove_number += 1
 
         # On a null move, simply swap turns and reset the en passant square.
         if not move:
@@ -1022,18 +973,18 @@ class Board:
         if self.is_zeroing(move):
             self.halfmove_clock = 0
 
-        from_bb = BB_SQUARES[move.from_square]
-        to_bb = BB_SQUARES[move.to_square]
+        from_bb = BB_SQUARES[SQUARES.index(move.from_square)]
+        to_bb = BB_SQUARES[SQUARES.index(move.to_square)]
 
         piece = self.remove_piece_at(move.from_square)
-        assert piece is not None, f"push() expects move to be pseudo-legal, but got {move} in {self.board_fen()}"
+        assert piece is not None, f"push() expects move to be pseudo-legal, but got {move}"
         piece_type = piece.piece_type
         capture_square = move.to_square
         captured_piece_type = self.piece_type_at(capture_square)
 
         # Update castling rights.
         king_sq = self.king(self.turn)
-        if not (self.abilities[king_sq] & B_GHOST):
+        if not (self.abilities[king_sq] & B_GHOST).any():
             self.castling_rights &= ~to_bb & ~from_bb
             if piece_type == KING:
                 if self.turn == WHITE:
@@ -1055,15 +1006,15 @@ class Board:
         if castling:
             a_side = move.to_square[1] < move.from_square[1]
 
-            self._remove_piece_at(move.from_square)
-            self._remove_piece_at(move.to_square)
+            king = self.remove_piece_at(move.from_square)
+            rook = self.remove_piece_at(move.to_square)
 
             if a_side:
-                self._set_piece_at(C1 if self.turn == WHITE else C8, KING, self.turn)
-                self._set_piece_at(D1 if self.turn == WHITE else D8, ROOK, self.turn)
+                self.set_piece_at(C1 if self.turn == WHITE else C8, king)
+                self.set_piece_at(D1 if self.turn == WHITE else D8, rook)
             else:
-                self._set_piece_at(G1 if self.turn == WHITE else G8, KING, self.turn)
-                self._set_piece_at(F1 if self.turn == WHITE else F8, ROOK, self.turn)
+                self.set_piece_at(G1 if self.turn == WHITE else G8, king)
+                self.set_piece_at(F1 if self.turn == WHITE else F8, rook)
 
         # Put the piece on the target square.
         if not castling:
@@ -1079,12 +1030,149 @@ class Board:
         self.turn = not self.turn
 
     def pop(self) -> Move:
-        """
-        Restores the previous position and returns the last move from the stack.
-
-        :raises: :exc:`IndexError` if the move stack is empty.
-        """
         return self.move_stack.pop()
+
+    def _ep_skewered(self, king: Square, capturer: Square) -> bool:
+        # Handle the special case where the king would be in check if the
+        # pawn and its capturer disappear from the rank.
+
+        # Vertical skewers of the captured pawn are not possible. (Pins on
+        # the capturer are not handled here.)
+        ep_square = self.get_ep_square()
+        assert ep_square is not None
+
+        last_double = ep_square + (-8 if self.turn == WHITE else 8)
+
+        occupancy = (self.occupied[SQUARES[last_double]] &
+                     ~BB_SQUARES[capturer] | BB_SQUARES[ep_square])
+
+        # Horizontal attack on the fifth or fourth rank.
+        horizontal_attackers = self.occupied_co[not self.turn] & (self.rooks | self.queens)
+        if (BB_RANK_ATTACKS[king][BB_RANK_MASKS[king] & occupancy] & horizontal_attackers).any():
+            return True
+
+        # Diagonal skewers. These are not actually possible in a real game,
+        # because if the latest double pawn move covers a diagonal attack,
+        # then the other side would have been in check already.
+        diagonal_attackers = self.occupied_co[not self.turn] & (self.bishops | self.queens)
+        if (BB_DIAG_ATTACKS[king][BB_DIAG_MASKS[king] & occupancy] & diagonal_attackers).any():
+            return True
+
+        return False
+
+    def _slider_blockers(self, king: Square) -> BoolBoard:
+        rooks_and_queens = self.rooks | self.queens
+        bishops_and_queens = self.bishops | self.queens
+        riders = (self.abilities & B_RIDER).astype(bool)
+
+        snipers = ((BB_RANK_ATTACKS[SQUARES.index(king)][0] & rooks_and_queens) |
+                   (BB_FILE_ATTACKS[SQUARES.index(king)][0] & rooks_and_queens) |
+                   (BB_DIAG_ATTACKS[SQUARES.index(king)][0] & bishops_and_queens) |
+                   (BB_RIDER_ATTACKS[SQUARES.index(king)][0] & riders))
+
+        blockers = 0
+
+        for sniper in scan_reversed(snipers & self.occupied_co[not self.turn]):
+            b = between(king, sniper) & self.occupied
+
+            # Add to blockers if exactly one piece in-between.
+            if b and BB_SQUARES[msb(b)] == b:
+                blockers |= b
+
+        return blockers & self.occupied_co[self.turn]
+
+    def _is_safe(self, king: Square, blockers: BoolBoard, move: Move) -> bool:
+        if move.from_square == king:
+            if self.is_castling(move):
+                return True
+            else:
+                return not self.is_attacked_by(not self.turn, move.to_square)
+        elif self.is_en_passant(move):
+            return bool((self.pin_mask(self.turn, move.from_square) & BB_SQUARES[SQUARES.index(move.to_square)]).any() and
+                        not self._ep_skewered(king, move.from_square))
+        else:
+            return bool(not (blockers & BB_SQUARES[SQUARES.index(move.from_square)]).any() or
+                        (ray(move.from_square, move.to_square) & BB_SQUARES[king]).any())
+
+    def _generate_evasions(self, king: Square, checkers: BoolBoard,
+                           from_mask: Optional[BoolBoard] = None, to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
+
+        sliders = checkers & (self.bishops | self.rooks | self.queens)
+
+        attacked = 0
+        for checker in scan_reversed(sliders):
+            attacked |= ray(king, checker) & ~BB_SQUARES[checker]
+
+        if BB_SQUARES[king] & from_mask:
+            for to_square in scan_reversed(BB_KING_ATTACKS[king] & ~self.occupied_co[self.turn] & ~attacked & to_mask):
+                yield Move(king, to_square)
+
+        checker = msb(checkers)
+        if BB_SQUARES[checker] == checkers:
+            # Capture or block a single checker.
+            target = between(king, checker) | checkers
+
+            yield from self.generate_pseudo_legal_moves(~self.kings & from_mask, target & to_mask)
+
+            ep_square = self.get_ep_square()
+            # Capture the checking pawn en passant (but avoid yielding
+            # duplicate moves).
+            if ep_square and not BB_SQUARES[ep_square] & target:
+                last_double = ep_square + (-8 if self.turn == WHITE else 8)
+                if last_double == checker:
+                    yield from self.generate_pseudo_legal_ep(from_mask, to_mask)
+
+    def generate_legal_ep(self, from_mask: Optional[BoolBoard] = None,
+                          to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
+
+        for move in self.generate_pseudo_legal_ep(from_mask, to_mask):
+            if not self.is_into_check(move):
+                yield move
+
+    def generate_legal_moves(self, from_mask: Optional[BoolBoard] = None,
+                             to_mask: Optional[BoolBoard] = None) -> Iterator[Move]:
+        if from_mask is None:
+            from_mask = BB_ALL.copy()
+        if to_mask is None:
+            to_mask = BB_ALL.copy()
+
+        king_mask = self.kings & self.occupied_co[self.turn]
+        if king_mask.any():
+            king = SQUARES[msb(king_mask)]
+            blockers = self._slider_blockers(king)
+            checkers = self.attackers_mask(not self.turn, king)
+            if checkers.any():
+                for move in self._generate_evasions(king, checkers, from_mask, to_mask):
+                    if self._is_safe(king, blockers, move):
+                        yield move
+            else:
+                for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
+                    if self._is_safe(king, blockers, move):
+                        yield move
+        else:
+            yield from self.generate_pseudo_legal_moves(from_mask, to_mask)
+
+    def has_legal_en_passant(self) -> bool:
+        return self.get_ep_square() is not None and any(self.generate_legal_ep())
+
+    def _transposition_key(self) -> Hashable:
+        keys = [self.pawns, self.knights, self.bishops, self.rooks,
+                self.queens, self.kings,
+                self.occupied_co[WHITE], self.occupied_co[BLACK],
+                self.turn, self.clean_castling_rights(),
+                self.ep_square if self.has_legal_en_passant() else None]
+        return tuple(
+            (BB_TO_FLAG * item).sum() if isinstance(item, ndarray) else item
+            for item in keys
+        )
 
 
 class PseudoLegalMoveGenerator:

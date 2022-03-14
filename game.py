@@ -1,14 +1,11 @@
-from chess import (
-    STARTING_FEN, COLOR_NAMES, PIECE_NAMES, BB_SQUARES,
+from numchess import (
+    COLOR_NAMES, PIECE_NAMES, BB_SQUARES,
     WHITE, BLACK,
     PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING)
-from chess import Board, Move
-from chess.polyglot import zobrist_hash as hash_board
-Board.__hash__ = hash_board
+from numchess import Move
 
 from pygame.constants import (
-    MOUSEBUTTONDOWN, MOUSEBUTTONUP, QUIT)
-from pygame.display import flip as display_flip, set_caption, set_icon, set_mode
+    MOUSEBUTTONDOWN, MOUSEBUTTONUP)
 from pygame.draw import circle as draw_circle
 from pygame.event import get as get_event
 from pygame.font import Font
@@ -17,7 +14,6 @@ from pygame.mouse import get_pos as get_mouse_pos, get_pressed as get_mouse_pres
 from pygame.transform import scale
 from pygame import Rect, init as pygame_init
 
-from math import ceil
 from os.path import join, split
 
 from bot import move_engine
@@ -36,7 +32,7 @@ PIECES = []
 
 folder = split(__file__)[0]
 for piece_color in COLOR_NAMES:
-    for piece_type in PIECE_NAMES[1:]:
+    for piece_type in PIECE_NAMES:
         PIECES.append(load_image(
             join(folder, 'assets', f'{piece_color}-{piece_type}.png')))
 
@@ -204,8 +200,8 @@ class Game:
         self.screen.blit(self.board_base, (xpad, ypad))
         if len(self.board.move_stack) != 0:
             last_move = self.board.move_stack[-1]
-            from_rank, from_file = divmod(last_move.from_square, 8)
-            to_rank, to_file = divmod(last_move.to_square, 8)
+            from_rank, from_file = last_move.from_square
+            to_rank, to_file = last_move.to_square
             from_color = (DARK_MOVE_COLOR if (from_rank + from_file) % 2 == 0
                           else LIGHT_MOVE_COLOR)
             to_color = (DARK_MOVE_COLOR if (to_rank + to_file) % 2 == 0
@@ -219,15 +215,15 @@ class Game:
                 (xpad + to_file * self.block_size,
                  ypad + (7 - to_rank) * self.block_size))
 
-        drag_square = self.drag_rank * 8 + self.drag_file
-        for square in range(64):
+        drag_square = (self.drag_rank, self.drag_file)
+        for square in SQUARES:
             if square == drag_square:
                 continue
             piece = self.board.piece_at(square)
             if piece is None:
                 continue
-            self.draw_piece(piece.piece_type - 1, piece.color,
-                            square // 8, square % 8)
+            self.draw_piece(piece.piece_type, piece.color,
+                            square[0], square[1])
 
         if self.drag_rank != -1:
             mx, my = get_mouse_pos()
@@ -235,25 +231,26 @@ class Game:
             for move in self.board.generate_legal_moves(
                     from_mask=BB_SQUARES[self.drag_rank * 8 + self.drag_file]):
                 square = move.to_square
-                mask = BB_SQUARES[square]
-                if (square // 8 + square % 8) % 2 == 0:
-                    if self.board.occupied_co[not self.board.turn] & mask:
+                mask = BB_SQUARES[SQUARES.index(square)]
+                if sum(square) % 2 == 0:
+                    if (self.board.occupied_co[not self.board.turn] & mask).any():
                         surface = self.dark_capture
                     else:
                         surface = self.dark_move
                 else:
-                    if self.board.occupied_co[not self.board.turn] & mask:
+                    if (self.board.occupied_co[not self.board.turn] & mask).any():
                         surface = self.light_capture
                     else:
                         surface = self.light_move
                 self.screen.blit(
-                    surface, (xpad + (square % 8) * self.block_size,
-                              ypad + (7 - square // 8) * self.block_size))
+                    surface, (xpad + (square[1]) * self.block_size,
+                              ypad + (7 - square[0]) * self.block_size))
 
-            piece = self.board.piece_at(self.drag_rank * 8 + self.drag_file)
-            self.screen.blit(
-                self.pieces[piece.piece_type - 1 + piece.color * 6],
-                (mx - self.drag_xpad, my - self.drag_ypad))
+            piece = self.board.piece_at((self.drag_rank, self.drag_file))
+            if piece is not None:
+                self.screen.blit(
+                    self.pieces[piece.piece_type + piece.color * 6],
+                    (mx - self.drag_xpad, my - self.drag_ypad))
 
         if self.promotion_square != -1:
             promotion_rank, promotion_file = divmod(self.promotion_square, 8)
@@ -310,6 +307,7 @@ class Game:
         self.drag_file = -1
         self.drag_xpad = 0
         self.drag_ypad = 0
+        self.menu_pressed = -1
         self.promotion_from_square = -1
         self.promotion_square = -1
         self.promotion_pressed = -1
@@ -334,7 +332,7 @@ class Game:
                     else:
                         self.promotion_square = -1
                     return
-                piece = self.board.piece_at(rank * 8 + file)
+                piece = self.board.piece_at((rank, file))
                 if piece is not None and piece.color == self.board.turn == self.player_turn:
                     self.drag_rank = rank
                     self.drag_file = file
@@ -357,7 +355,8 @@ class Game:
                 p_rank, p_file = divmod(self.promotion_square, 8)
                 pressed = self.promotion_pressed
                 if file == p_file and rank in {p_rank + pressed, p_rank - pressed}:
-                    move = Move(self.promotion_from_square, self.promotion_square,
+                    move = Move(divmod(self.promotion_from_square, 8),
+                                divmod(self.promotion_square, 8),
                                 promotion=(QUEEN, KNIGHT, ROOK, BISHOP)[pressed])
                     self.play_move(move)
                 self.promotion_from_square = -1
@@ -373,41 +372,16 @@ class Game:
                 from_square = self.drag_rank * 8 + self.drag_file
                 to_square = rank * 8 + file
                 if from_square != to_square:
-                    if rank in {0, 7} and self.board.piece_type_at(from_square) == PAWN:
+                    if rank in {0, 7} and self.board.piece_type_at(divmod(from_square, 8)) == PAWN:
                         for piece in (QUEEN, KNIGHT, ROOK, BISHOP):
-                            move = Move(from_square, to_square, promotion=piece)
+                            move = Move(divmod(from_square, 8),
+                                        divmod(to_square, 8), promotion=piece)
                             if not self.board.is_legal(move):
                                 continue
-                            self.drag_rank = -1
-                            self.drag_file = -1
-                            self.drag_xpad = 0
-                            self.drag_ypad = 0
-                            self.menu_pressed = -1
-
-                            self.promotion_from_square = from_square
-                            self.promotion_square = to_square
-                            self.promotion_pressed = -1
+                            self._lmb_up()
                             return
                         self._lmb_up()
                         return
-                    move = Move(from_square, to_square)
+                    move = Move(divmod(from_square, 8), divmod(to_square, 8))
                     self.play_move(move)
             self._lmb_up()
-
-    def run(self):
-        self.size = self.screen.get_size()
-        self.update(self.size)
-
-        while True:
-            self.draw()
-            self.tick()
-
-            for event in get_event():
-                if event.type == QUIT:
-                    return
-                self.on_event(event)
-
-            size = self.screen.get_size()
-            if size != self.size:
-                self.size == size
-                self.update(size)

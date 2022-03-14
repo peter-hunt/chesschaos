@@ -26,6 +26,7 @@ def get_level(index) -> Board:
          piece)[-1] if piece is not None
         else None for piece in pieces
     ]
+
     board = Board()
     for rank in range(len(pieces) // 8):
         for file in range(8):

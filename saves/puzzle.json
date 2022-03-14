@@ -1,0 +1,25 @@
+{
+  "name": "puzzle",
+  "coins": 0,
+  "inventory": [],
+  "deck": [
+    {"piece_type": 3},
+    {"piece_type": 1},
+    {"piece_type": 2},
+    {"piece_type": 4},
+    {"piece_type": 5},
+    {"piece_type": 2},
+    {"piece_type": 1},
+    {"piece_type": 3},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0},
+    {"piece_type": 0}
+  ],
+  "penalty": [],
+  "last_update": 1647257353.4997642
+}
