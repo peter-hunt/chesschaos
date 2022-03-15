@@ -11,7 +11,7 @@ __all__ = [
 
 
 # pawn, knight, bishop, rook, queen, king
-PIECE_VALUES = [None, 1, 3.2, 3.33, 5.1, 8.8, 0]
+PIECE_VALUES = [1, 3.2, 3.33, 5.1, 8.8, 0]
 PAWN_POS_VALUES = [
      0.0 ,  0.0 ,  0.0 ,  0.0 ,  0.0 ,  0.0 ,  0.0 ,  0.0 ,
      0.05,  0.1 ,  0.1 , -0.2 , -0.2 ,  0.1 ,  0.1 ,  0.05,
@@ -73,9 +73,9 @@ KING_POS_VALUES = [
     -0.3 , -0.4 , -0.4 , -0.5 , -0.5 , -0.4 , -0.4 , -0.3 ,
 ]
 
-POS_VALUES = [[], PAWN_POS_VALUES, KNIGHT_POS_VALUES, BISHOP_POS_VALUES,
+POS_VALUES = [PAWN_POS_VALUES, KNIGHT_POS_VALUES, BISHOP_POS_VALUES,
               ROOK_POS_VALUES, QUEEN_POS_VALUES, KING_POS_VALUES]
-for i in range(1, 7):
+for i in range(6):
     for j in range(64):
         POS_VALUES[i][j] += PIECE_VALUES[i]
 
@@ -98,22 +98,22 @@ def eval_board(board):  # 25k/s
     kings = board.kings
     occupied_co = board.occupied_co[WHITE]
     for pos in range(64):
-        if not occupied & flag:
+        if not (occupied & flag).any():
             flag <<= 1
             continue
-        if pawns & flag:
+        if (pawns & flag).any():
             piece_type = PAWN
-        elif knights & flag:
+        elif (knights & flag).any():
             piece_type = KNIGHT
-        elif bishops & flag:
+        elif (bishops & flag).any():
             piece_type = BISHOP
-        elif rooks & flag:
+        elif (rooks & flag).any():
             piece_type = ROOK
-        elif queens & flag:
+        elif (queens & flag).any():
             piece_type = QUEEN
-        elif kings & flag:
+        elif (kings & flag).any():
             piece_type = KING
-        if occupied_co & flag:
+        if (occupied_co & flag).any():
             weight += POS_VALUES[piece_type][pos]
         else:
             weight -= POS_VALUES[piece_type][pos ^ 0x38]

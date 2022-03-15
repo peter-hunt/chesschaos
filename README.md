@@ -14,6 +14,9 @@ _ChessChaos is a tactic adventure story set in Chaos of Chess, where pieces have
 
 Currently, only a few playable chess positions are added. The design of the game features can be seen [here](./design.md)
 
+This game is inspired by Minecraft Dungeons and a few other games. I started this project because I was into chess lately, and I wanted to combine chess with modern RPG genre.
+
+
 # Table of Contents
 
 - [ChessChaos](#chesschaos)

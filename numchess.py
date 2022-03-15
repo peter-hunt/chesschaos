@@ -295,12 +295,12 @@ def _rays() -> list[list[BoolBoard]]:
 BB_RAYS = _rays()
 
 def ray(a: Square, b: Square) -> BoolBoard:
-    return BB_RAYS[a][b]
+    return BB_RAYS[SQUARES.index(a)][SQUARES.index(b)]
 
 def between(a: Square, b: Square) -> BoolBoard:
     mask = BB_EMPTY.copy().reshape((64,))
     mask[SQUARES.index(a):SQUARES.index(b)] = True
-    bb = BB_RAYS[a][b] & mask
+    bb = BB_RAYS[SQUARES.index(a)][SQUARES.index(b)] & mask
     bb = bb.reshape((64,))
     bb[lsb(bb)] = False
     return bb.reshape((8, 8))
@@ -330,6 +330,41 @@ class Move:
         return f'Move({SQUARE_NAMES[self.from_square]}{SQUARE_NAMES[self.to_square]})'
 
 
+class _BoardState:
+
+    def __init__(self, board) -> None:
+        self.pawns = board.pawns.copy()
+        self.knights = board.knights.copy()
+        self.bishops = board.bishops.copy()
+        self.rooks = board.rooks.copy()
+        self.queens = board.queens.copy()
+        self.kings = board.kings.copy()
+
+        self.occupied_w = board.occupied_co[WHITE].copy()
+        self.occupied_b = board.occupied_co[BLACK].copy()
+        self.occupied = board.occupied.copy()
+
+        self.turn = board.turn
+        self.castling_rights = board.castling_rights.copy()
+        self.halfmove_clock = board.halfmove_clock
+
+    def restore(self, board) -> None:
+        board.pawns = self.pawns.copy()
+        board.knights = self.knights.copy()
+        board.bishops = self.bishops.copy()
+        board.rooks = self.rooks.copy()
+        board.queens = self.queens.copy()
+        board.kings = self.kings.copy()
+
+        board.occupied_co[WHITE] = self.occupied_w.copy()
+        board.occupied_co[BLACK] = self.occupied_b.copy()
+        board.occupied = self.occupied.copy()
+
+        board.turn = self.turn
+        board.castling_rights = self.castling_rights.copy()
+        board.halfmove_clock = self.halfmove_clock
+
+
 class Board:
     turn: Color = WHITE
     pawns: BoolBoard = BB_EMPTY.copy()
@@ -348,6 +383,7 @@ class Board:
     last_move: Optional[Move] = None
     halfmove_clock: int = 0
     move_stack: list[Move] = []
+    _stack: list[_BoardState] = []
 
     def clear_board(self) -> None:
         self.pawns = BB_EMPTY.copy()
@@ -367,7 +403,12 @@ class Board:
         self.castling_rights = BB_EMPTY.copy()
         self.last_move = None
         self.halfmove_clock = 0
+
+        self.clear_stack()
+
+    def clear_stack(self) -> None:
         self.move_stack.clear()
+        self._stack.clear()
 
     def piece_at(self, square: Square) -> Optional[Piece]:
         piece_type = self.piece_type_at(square)
@@ -570,12 +611,19 @@ class Board:
         board.castling_rights = self.castling_rights
         board.last_move = self.last_move
         board.halfmove_clock = self.halfmove_clock
+        board.move_stack = self.move_stack
+        board._stack = self._stack
 
         return board
 
     __copy__ = copy
 
     def clean_castling_rights(self) -> BoolBoard:
+        if self._stack:
+            # No new castling rights are assigned in a game, so we can assume
+            # they were filtered already.
+            return self.castling_rights
+
         castling = self.castling_rights & self.rooks
         white_castling = castling & BB_RANK_1 & self.occupied_co[WHITE]
         black_castling = castling & BB_RANK_8 & self.occupied_co[BLACK]
@@ -614,13 +662,14 @@ class Board:
             from_mask = BB_ALL.copy()
         if to_mask is None:
             to_mask = BB_ALL.copy()
-        our_pieces = self.occupied_co[self.turn] ^ (
-            self.abilities & B_EXPENDABLE).astype(bool)
+
+        our_pieces = self.occupied_co[self.turn]
+        unexpendable = our_pieces & ~(self.abilities & B_EXPENDABLE).astype(bool)
 
         # Generate piece moves.
         non_pawns = our_pieces & ~self.pawns & from_mask
         for from_square in scan_reversed(non_pawns):
-            moves = self.attacks_mask(from_square) & ~our_pieces & to_mask
+            moves = self.attacks_mask(from_square) & ~unexpendable & to_mask
             for to_square in scan_reversed(moves):
                 yield Move(from_square, to_square)
 
@@ -642,33 +691,35 @@ class Board:
                  (self.abilities & B_EXPENDABLE).astype(bool)) & to_mask)
 
             for to_square in scan_reversed(targets):
-                if to_square[0] in [0, 7]:
+                if to_square[0] in {0, 7}:
                     yield Move(from_square, to_square, QUEEN)
                     yield Move(from_square, to_square, ROOK)
                     yield Move(from_square, to_square, BISHOP)
                     yield Move(from_square, to_square, KNIGHT)
-                elif self.abilities[from_square] & B_EAGLE and to_square[0] in [1, 6]:
+                elif self.abilities[from_square] & B_EAGLE and to_square[0] in {1, 6}:
                     yield Move(from_square, to_square, QUEEN)
                     yield Move(from_square, to_square, ROOK)
                     yield Move(from_square, to_square, BISHOP)
                     yield Move(from_square, to_square, KNIGHT)
+                    yield Move(from_square, to_square)
                 else:
                     yield Move(from_square, to_square)
 
         # Prepare pawn advance generation.
         if self.turn == WHITE:
-            single_moves = pawns << 8 & ~self.occupied
-            double_moves = single_moves << 8 & ~self.occupied & (BB_RANK_3 | BB_RANK_4)
+            single_moves = shift_up(pawns) & ~self.occupied
+            double_moves = shift_up(single_moves) & ~self.occupied & (BB_RANK_3 | BB_RANK_4)
         else:
-            single_moves = pawns >> 8 & ~self.occupied
-            double_moves = single_moves >> 8 & ~self.occupied & (BB_RANK_6 | BB_RANK_5)
+            single_moves = shift_down(pawns) & ~self.occupied
+            double_moves = shift_down(single_moves) & ~self.occupied & (BB_RANK_6 | BB_RANK_5)
 
         single_moves &= to_mask
         double_moves &= to_mask
 
         # Generate single pawn moves.
         for to_square in scan_reversed(single_moves):
-            from_square = to_square + (8 if self.turn == BLACK else -8)
+            from_square = (
+                to_square[0] + (1 if self.turn == BLACK else -1), to_square[1])
 
             if to_square[0] in [0, 7]:
                 yield Move(from_square, to_square, QUEEN)
@@ -680,12 +731,14 @@ class Board:
                 yield Move(from_square, to_square, ROOK)
                 yield Move(from_square, to_square, BISHOP)
                 yield Move(from_square, to_square, KNIGHT)
+                yield Move(from_square, to_square)
             else:
                 yield Move(from_square, to_square)
 
         # Generate double pawn moves.
         for to_square in scan_reversed(double_moves):
-            from_square = to_square + (16 if self.turn == BLACK else -16)
+            from_square = (
+                to_square[0] + (2 if self.turn == BLACK else -2), to_square[1])
             yield Move(from_square, to_square)
 
         # Generate en passant captures.
@@ -817,11 +870,11 @@ class Board:
 
         # Source square must not be vacant.
         piece = self.piece_type_at(move.from_square)
-        if not piece:
+        if piece is None:
             return False
         elif piece == PAWN:
             if self.piece_type_at(move.to_square) == PAWN:
-                if self.occupied_co[not self.turn]:
+                if (self.occupied_co[not self.turn]).any():
                     if self.abilities[move.from_square] & B_PACIFIST:
                         return False
                     if self.abilities[move.to_square] & B_PACIFIST:
@@ -858,7 +911,8 @@ class Board:
                 return True
 
         # Destination square can not be occupied.
-        if (self.occupied_co[self.turn] & to_mask).any():
+        unexpendable = self.occupied_co[self.turn] & ~(self.abilities & B_EXPENDABLE).astype(bool)
+        if (unexpendable & to_mask).any():
             return False
 
         # Handle pawn moves.
@@ -910,6 +964,16 @@ class Board:
         return self.is_repetition(5)
 
     def is_repetition(self, count: int = 3) -> bool:
+        # Fast check, based on occupancy only.
+        maybe_repetitions = 1
+        for state in reversed(self._stack):
+            if (state.occupied == self.occupied).all():
+                maybe_repetitions += 1
+                if maybe_repetitions >= count:
+                    break
+        if maybe_repetitions < count:
+            return False
+
         # Check full replay.
         transposition_key = self._transposition_key()
         switchyard = []
@@ -949,17 +1013,32 @@ class Board:
         touched = BB_SQUARES[SQUARES.index(move.from_square)] ^ BB_SQUARES[SQUARES.index(move.to_square)]
         return (touched & self.pawns).any() or (touched & self.occupied_co[not self.turn]).any()
 
+    def _reduces_castling_rights(self, move: Move) -> bool:
+        cr = self.clean_castling_rights()
+        touched = BB_SQUARES[(move.from_square)] ^ BB_SQUARES[(move.to_square)]
+        return bool((touched & cr).any() or
+                    (cr & BB_RANK_1).any() and (touched & self.kings & self.occupied_co[WHITE]).any() or
+                    (cr & BB_RANK_8).any() and (touched & self.kings & self.occupied_co[BLACK]).any())
+
+    def is_irreversible(self, move: Move) -> bool:
+        return self.is_zeroing(move) or self._reduces_castling_rights(move) or self.has_legal_en_passant()
+
     def is_castling(self, move: Move) -> bool:
         if (self.kings & BB_SQUARES[SQUARES.index(move.from_square)]).any():
             diff = move.from_square[1] - move.to_square[1]
             return abs(diff) > 1 or (self.rooks & self.occupied_co[self.turn] & BB_SQUARES[SQUARES.index(move.to_square)]).any()
         return False
 
+    def _board_state(self) -> _BoardState:
+        return _BoardState(self)
+
     def push(self, move: Move) -> None:
         # Push move and remember board state.
         move = self._to_chess960(move)
+        board_state = self._board_state()
         self.castling_rights = self.clean_castling_rights()  # Before pushing stack
         self.move_stack.append(move)
+        self._stack.append(board_state)
 
         # Increment move counters.
         self.halfmove_clock += 1
@@ -1023,14 +1102,13 @@ class Board:
             piece.unique_ability = 0
             self.set_piece_at(move.to_square, piece)
 
-            if captured_piece_type:
-                self._push_capture(move, capture_square, captured_piece_type)
-
         # Swap turn.
         self.turn = not self.turn
 
     def pop(self) -> Move:
-        return self.move_stack.pop()
+        move = self.move_stack.pop()
+        self._stack.pop().restore(self)
+        return move
 
     def _ep_skewered(self, king: Square, capturer: Square) -> bool:
         # Handle the special case where the king would be in check if the
