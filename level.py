@@ -34,13 +34,13 @@ def get_level(index) -> Board:
             if piece is not None:
                 board.set_piece_at((7 - rank, file), piece)
     king_file = board.king(BLACK)[1]
-    for i in range(king_file - 1, 8):
-        if (board.rooks & BB_RANK_8 & BB_FILES[i]).any():
-            board.castling_rights |= BB_RANK_8 & BB_FILES[i]
+    for file in range(king_file - 1, 8):
+        if board.rooks[7, file]:
+            board.castling_rights |= BB_SQUARES[SQUARES.index((7, file))]
             break
-    for i in range(king_file - 1, -1, -1):
-        if (board.rooks & BB_RANK_8 & BB_FILES[i]).any():
-            board.castling_rights |= BB_RANK_8 & BB_FILES[i]
+    for file in range(king_file - 1, -1, -1):
+        if board.rooks[7, file]:
+            board.castling_rights |= BB_SQUARES[SQUARES.index((7, file))]
             break
 
     return board

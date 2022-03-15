@@ -300,7 +300,7 @@ def ray(a: Square, b: Square) -> BoolBoard:
 def between(a: Square, b: Square) -> BoolBoard:
     mask = BB_EMPTY.copy().reshape((64,))
     mask[SQUARES.index(a):SQUARES.index(b)] = True
-    bb = BB_RAYS[SQUARES.index(a)][SQUARES.index(b)] & mask
+    bb = BB_RAYS[SQUARES.index(a)][SQUARES.index(b)] & mask.reshape((8, 8))
     bb = bb.reshape((64,))
     bb[lsb(bb)] = False
     return bb.reshape((8, 8))
@@ -531,9 +531,9 @@ class Board:
         return BB_ALL.copy()
 
     def remove_piece_at(self, square: Square) -> Optional[Piece]:
-        mask = BB_SQUARES[SQUARES.index(square)]
         if not self.occupied[square]:
             return
+        mask = BB_SQUARES[SQUARES.index(square)]
         color = self.occupied_co[WHITE][square]
 
         if (self.pawns & mask).any():
@@ -553,7 +553,7 @@ class Board:
             piece_type = QUEEN
         else:
             self.kings[square] = False
-            piece_type = PAWN
+            piece_type = KING
 
         self.occupied[square] = False
         self.occupied_co[color][square] = False
@@ -893,7 +893,7 @@ class Board:
             if piece != PAWN:
                 return False
 
-            if self.abilites[move.from_square] & B_EAGLE:
+            if self.abilities[move.from_square] & B_EAGLE:
                 if self.turn == WHITE and move.to_square[0] not in {6, 7}:
                     return False
                 elif self.turn == BLACK and move.to_square[0] not in {0, 1}:
@@ -1056,7 +1056,7 @@ class Board:
         to_bb = BB_SQUARES[SQUARES.index(move.to_square)]
 
         piece = self.remove_piece_at(move.from_square)
-        assert piece is not None, f"push() expects move to be pseudo-legal, but got {move}"
+        assert piece is not None, f'push() expects move to be pseudo-legal, but got {move}'
         piece_type = piece.piece_type
         capture_square = move.to_square
         captured_piece_type = self.piece_type_at(capture_square)
@@ -1081,25 +1081,20 @@ class Board:
             piece_type = move.promotion
 
         # Castling.
-        castling = piece_type == KING and self.occupied_co[self.turn] & to_bb
+        castling = (piece_type == KING) and (self.occupied_co[self.turn] & to_bb).any()
         if castling:
             a_side = move.to_square[1] < move.from_square[1]
 
-            king = self.remove_piece_at(move.from_square)
             rook = self.remove_piece_at(move.to_square)
 
             if a_side:
-                self.set_piece_at(C1 if self.turn == WHITE else C8, king)
+                self.set_piece_at(C1 if self.turn == WHITE else C8, piece)
                 self.set_piece_at(D1 if self.turn == WHITE else D8, rook)
             else:
-                self.set_piece_at(G1 if self.turn == WHITE else G8, king)
+                self.set_piece_at(G1 if self.turn == WHITE else G8, piece)
                 self.set_piece_at(F1 if self.turn == WHITE else F8, rook)
-
         # Put the piece on the target square.
-        if not castling:
-            piece.piece_type = piece_type
-            piece.abilities = 0
-            piece.unique_ability = 0
+        else:
             self.set_piece_at(move.to_square, piece)
 
         # Swap turn.
@@ -1154,7 +1149,7 @@ class Board:
             b = between(king, sniper) & self.occupied
 
             # Add to blockers if exactly one piece in-between.
-            if b and BB_SQUARES[msb(b)] == b:
+            if b.any() and (BB_SQUARES[msb(b)] == b).all():
                 blockers |= b
 
         return blockers & self.occupied_co[self.turn]
@@ -1183,23 +1178,23 @@ class Board:
 
         attacked = 0
         for checker in scan_reversed(sliders):
-            attacked |= ray(king, checker) & ~BB_SQUARES[checker]
+            attacked |= ray(king, checker) & ~BB_SQUARES[SQUARES.index(checker)]
 
-        if BB_SQUARES[king] & from_mask:
-            for to_square in scan_reversed(BB_KING_ATTACKS[king] & ~self.occupied_co[self.turn] & ~attacked & to_mask):
+        if (BB_SQUARES[SQUARES.index(king)] & from_mask).any():
+            for to_square in scan_reversed(BB_KING_ATTACKS[SQUARES.index(king)] & ~self.occupied_co[self.turn] & ~attacked & to_mask):
                 yield Move(king, to_square)
 
         checker = msb(checkers)
-        if BB_SQUARES[checker] == checkers:
+        if (BB_SQUARES[checker] == checkers).all():
             # Capture or block a single checker.
-            target = between(king, checker) | checkers
+            target = between(king, SQUARES[checker]) | checkers
 
             yield from self.generate_pseudo_legal_moves(~self.kings & from_mask, target & to_mask)
 
             ep_square = self.get_ep_square()
             # Capture the checking pawn en passant (but avoid yielding
             # duplicate moves).
-            if ep_square and not BB_SQUARES[ep_square] & target:
+            if ep_square is not None and not (BB_SQUARES[ep_square] & target).any():
                 last_double = ep_square + (-8 if self.turn == WHITE else 8)
                 if last_double == checker:
                     yield from self.generate_pseudo_legal_ep(from_mask, to_mask)

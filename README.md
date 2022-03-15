@@ -30,6 +30,7 @@ This game is inspired by Minecraft Dungeons and a few other games. I started thi
 - [Content](#content)
   - [Added Features](#added-features)
   - [Planned Features](#planned-features)
+- [Known Issues](#known-issues)
 - [How to Contribute](#how-to-contribute)
 
 # Credits
@@ -84,6 +85,10 @@ The game design of ChessChaos can be seen [here](./design.md)
 - Dungeon Mode (dungeons with adventure mode combat system)
 - Items and Inventory
 - Levels and maybe Skills
+
+# Known Issues
+
+- Can play move that's into check.
 
 # How to Contribute
 

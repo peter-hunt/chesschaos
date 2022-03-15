@@ -56,13 +56,13 @@ class Game:
                 if piece is not None:
                     self.board.set_piece_at((rank, file), piece)
         king_file = self.board.king(WHITE)[1]
-        for i in range(king_file - 1, 8):
-            if (self.board.rooks & BB_RANK_1 & BB_FILES[i]).any():
-                self.board.castling_rights |= BB_RANK_1 & BB_FILES[i]
+        for file in range(king_file - 1, 8):
+            if self.board.rooks[0, file]:
+                self.board.castling_rights |= BB_SQUARES[SQUARES.index((0, file))]
                 break
-        for i in range(king_file - 1, -1, -1):
-            if (self.board.rooks & BB_RANK_1 & BB_FILES[i]).any():
-                self.board.castling_rights |= BB_RANK_1 & BB_FILES[i]
+        for file in range(king_file - 1, -1, -1):
+            if self.board.rooks[0, file]:
+                self.board.castling_rights |= BB_SQUARES[SQUARES.index((0, file))]
                 break
 
         self.level_selected = level_selected
@@ -285,10 +285,11 @@ class Game:
                     + (screen_height * 3 / 50 - text_height) / 2)
             self.screen.blit(self.level_text_winner, (xpad, ypad))
 
-    def draw(self):
+    def draw(self, *, draw_menu=True):
         self.screen.fill((0, 0, 0, 0))
         self.draw_board()
-        self.draw_menu()
+        if draw_menu:
+            self.draw_menu()
 
     def play_move(self, move):
         if self.board.is_legal(move):

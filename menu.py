@@ -90,7 +90,10 @@ class Window:
 
     def update(self, size=None):
         if size is not None:
-            self.size = size
+            if size == self.size:
+                size = None
+            else:
+                self.size = size
         width, height = self.size
 
         if width / height < 1.3:
@@ -146,7 +149,7 @@ class Window:
         self.update_profile()
 
         if self.game is not None:
-            self.game.update(self.size)
+            self.game.update(size)
 
     def update_profile(self):
         width, height = self.size
@@ -307,7 +310,7 @@ class Window:
         if self.profile is not None:
             self.draw_menu()
         if self.game is not None:
-            self.game.draw()
+            self.game.draw(draw_menu=not self.is_profile_selected)
             self.screen.blit(self.game.screen, (0, 0))
 
         display_flip()
@@ -396,6 +399,8 @@ class Window:
                     self.profile.dump()
                     profiles = get_profiles()
                     self.profile_selected = 0
+                    self.level_selected = -1
+                    self.game = None
                     self.menu_page = 0
                     self.update()
                 else:
@@ -406,6 +411,8 @@ class Window:
                             self.profile.dump()
                         profiles = get_profiles()
                         self.profile = Profile.load(profiles[profile_index])
+                        self.level_selected = -1
+                        self.game = None
                         self.menu_page = 0
                         self.update()
             self._lmb_up()
