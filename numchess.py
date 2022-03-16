@@ -10,6 +10,7 @@ from constants import *
 
 PieceType = int
 PIECE_TYPES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING] = range(6)
+PIECE_SYMBOLS = ['p', 'n', 'b', 'r', 'q', 'k']
 PIECE_NAMES = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
 
 Color = bool
@@ -56,6 +57,7 @@ def square_distance(a: Square, b: Square) -> int:
 
 def square_mirror(square: Square) -> Square:
     return (square[0], 7 - square[1])
+
 
 SQUARES_180 = [square_mirror(sq) for sq in SQUARES]
 
@@ -385,6 +387,9 @@ class Board:
     move_stack: list[Move] = []
     _stack: list[_BoardState] = []
 
+    def __init__(self):
+        self.clear_board()
+
     def clear_board(self) -> None:
         self.pawns = BB_EMPTY.copy()
         self.knights = BB_EMPTY.copy()
@@ -593,6 +598,28 @@ class Board:
 
         self.abilities[square] = piece.abilities
         self.unique_ability[square] = piece.unique_ability
+
+    def __str__(self) -> str:
+        builder = []
+
+        for rank in range(7, -1, -1):
+            for file in range(8):
+                square = (rank, file)
+                piece = self.piece_at(square)
+
+                if piece:
+                    symbol = PIECE_SYMBOLS[piece.piece_type]
+                    builder.append(symbol.upper() if piece.color else symbol)
+                else:
+                    builder.append('.')
+
+                if file == 7:
+                    if rank != 0:
+                        builder.append('\n')
+                else:
+                    builder.append(' ')
+
+        return ''.join(builder)
 
     def copy(self):
         board = type(self)
