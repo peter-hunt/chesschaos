@@ -154,11 +154,13 @@ Partially inspired by [chess.com](https://www.chess.com/article/view/10-remarkab
 - Abomination NOT IMPLEMENTED
 - - Can capture king on the same file or same rank without intervening pieces.
 - Panic NOT IMPLEMENTED
-- - Can make 2 moves when checked. The first move needn't move out of check.
+- - Can make 2 moves when checked. The first move has to get out of check, and checking opponent breaks move chain.
 - Stubborn NOT IMPLEMENTED
 - - Can castle when checked or the crossing square is attacked.
 - Ghost NOT IMPLEMENTED
 - - Stubborn, and can castle infinitely in any direction even if king or rook is moved.
+- Rapid NOT IMPLEMENTED
+- - Can always make 2 moves. The first move has to get out of check, and checking opponent breaks move chain.
 
 ## Art
 

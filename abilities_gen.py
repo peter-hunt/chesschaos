@@ -18,7 +18,7 @@ S_ADAPTIVE = (
 S_PAWN = ('coward', 'expendable', 'eagle', 'explorer', 'pacifist', 'pioneer')
 S_KING = (
     'commander', 'grimace', 'barterer', 'sluggard',
-    'abomination', 'panic', 'stubborn', 'ghost')
+    'abomination', 'panic', 'stubborn', 'ghost', 'rapid')
 
 S_PAWN_UNIQUE = (
     'charger', 'drunkard', 'soldier', 'sergeant', 'berserker')
@@ -87,21 +87,49 @@ for i, abilities in enumerate(S_UNIQUE_TYPE):
 
 
 if __name__ == '__main__':
-    _all_ = ['ABILITY_CATEGORIES', 'FLAGS', 'UNIQUE_FLAGS']
-    _b_all_ = [name for name in __all__ if name.startswith('B_')]
-    _b_special_ = ['B_NONE', 'B_ALL', 'B_TYPE', 'B_UNIQUE_TYPE',
-                   'B_ADAPTIVE', 'B_PAWN', 'B_KING']
-    _b_all_ = _b_special_ + sorted(
-        {*_b_all_} - {*_b_special_},
+    def chunks(lst, size):
+        return [lst[i:i + size] for i in range(0, len(lst), size)]
+
+    names = [
+        ['ABILITY_CATEGORIES', 'FLAGS', 'UNIQUE_FLAGS'],
+        ['S_NONE', 'S_ALL', 'S_ALL_UNIQUE', 'S_TYPE', 'S_UNIQUE_TYPE'],
+        ['S_ADAPTIVE', 'S_PAWN', 'S_KING', 'S_PAWN_UNIQUE'],
+        ['B_NONE', 'B_ALL', 'B_TYPE', 'B_UNIQUE_TYPE'],
+        ['B_ADAPTIVE', 'B_PAWN', 'B_KING'],
+    ]
+    specials = sum(names, start=[])
+    bit_names = [name for name in __all__ if name.startswith('B_')]
+    bit_names = sorted(
+        {*bit_names} - {*specials},
         key=lambda name: (S_ALL + S_ALL_UNIQUE).index(name[2:].lower()))
-    _s_all_ = ['S_NONE', 'S_ALL', 'S_ALL_UNIQUE', 'S_TYPE', 'S_UNIQUE_TYPE',
-               'S_ADAPTIVE', 'S_PAWN', 'S_KING', 'S_PAWN_UNIQUE']
-    _all_ += _s_all_ + _b_all_
-    code = f'__all__ = {_all_}\n\n' + '\n'.join(
-        f'{name} = 0x{value:08x}'
-        if isinstance(value := globals()[name], int) and name.startswith('B_') else
-        f'{name} = {value}'
-        for name in _all_
+    names.extend(chunks(bit_names, 4))
+    all_vars = {name: globals()[name] for name in sum(names, start=[])}
+
+    builder = ['__all__ = [']
+    for group in names:
+        builder.append('\n    ' + ', '.join(f'{name!r}' for name in group) + ',')
+    builder[-1] = builder[-1][:-1] + ']\n\n'
+    vars = '\n'.join(
+        f'{name} = ' +
+        ('{\n    ' + f',\n    '.join(f'{flag!r}: 0x{num:08x}'.upper().replace('0X', '0x')
+                                     for flag, num in value.items()) + '}'
+         if name == 'FLAGS' else
+         '[' + f', '.join(f'0x{num:08x}'.upper().replace('0X', '0x')
+                          for num in value) + ']'
+         if name == 'B_TYPE' else
+         '{\n    ' + f',\n    '.join(f'{flag!r}: {num}' for flag, num in value.items()) + '}'
+         if name == 'UNIQUE_FLAGS' else
+         '(\n    ' + f',\n    '.join(f'{item}' for item in value) + ')'
+         if name in {'S_TYPE'} else
+         '(\n    ' + f',\n    '.join(', '.join(f'{item!r}' for item in group)
+                                     for group in chunks(value, 4)) + ')'
+         if name in {'S_ALL', 'S_ADAPTIVE', 'S_PAWN', 'S_KING', 'S_PAWN_UNIQUE', 'S_ALL_UNIQUE'} else
+         f'0x{value:08x}'
+         if isinstance(value, int) and name.startswith('B_') else
+         f'{value}') for name, value in all_vars.items()
     )
+    builder.append(vars)
+    code = ''.join(builder)
+
     with open('./abilities.py', 'w') as file:
         file.write(code)
