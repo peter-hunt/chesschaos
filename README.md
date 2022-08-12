@@ -1,5 +1,7 @@
 # ChessChaos
 
+# WARNING: THIS PROJECT IS DISCONTINUED
+
 ![](https://img.shields.io/github/repo-size/peter-hunt/chesschaos)
 ![](https://img.shields.io/github/license/peter-hunt/chesschaos)
 ![](https://img.shields.io/github/issues/peter-hunt/chesschaos)
